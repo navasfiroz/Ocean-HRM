@@ -55,6 +55,7 @@ class Team(db.Model):
     name = db.Column(db.String, nullable=False)
 
 class Message(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
     sender = db.Column(db.Integer, nullable=False)
     receiver = db.Column(db.Integer, nullable=False)
     is_group = db.Column(db.Boolean, nullable=False)
@@ -62,24 +63,23 @@ class Message(db.Model):
 
 
 class Activity_log(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
     time = db.Column(db.DateTime)
     action_by = db.Column(db.Integer, nullable=False)
     action_type = db.Column(db.String, nullable=False)
-
-
 
 
 # db.create_all()
 # new_org = User(name="Azeez",email="navasfiroz@gmail.com")
 # db.session.add(new_org)
 # db.session.commit()
-for name in User.query.all():
-    print(name.name)
+# for name in User.query.all():
+#     print(name.name)
 
 
-# @app.route('/')
-# def index_page():
-#     return render_template("index.html")
+@app.route('/')
+def index_page():
+    return render_template("template.html")
 
-# app.run(debug=True)
+app.run(debug=True)
 
