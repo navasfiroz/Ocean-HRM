@@ -1,0 +1,66 @@
+{% extends "template.html" %}
+{% block title %}
+<title>Teams</title>
+{% endblock %}
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-md-8">
+      <div class="card">
+        <div class="card-header card-header-primary">
+          <h4 class="card-title">Create a New Team</h4>
+          <p class="card-category">Eg: Finance, Marketing, Developers etc</p>
+        </div>
+        <div class="card-body">
+          <form action="/teams/" method="POST">
+            <div class="row">
+              <div class="col-md-12">
+                <div class="form-group bmd-form-group">
+                  <label class="bmd-label-floating">Team Name</label>
+                  <input type="text" name="team-name" id="team-name" class="form-control">
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary pull-right">Create</button>
+              <div class="clearfix"></div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-12">
+      <div class="card">
+        <div class="card-header card-header-primary">
+          <h4 class="card-title ">Simple Table</h4>
+          <p class="card-category"> Here is a subtitle for this table</p>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table">
+              <thead class=" text-primary">
+                <tr><th>
+                  ID
+                </th>
+                <th>
+                  Name
+                </th>
+              </tr></thead>
+              <tbody>
+              {% for team in teams%}
+                <tr>
+                  <td>
+                    {{team.id}}
+                  </td>
+                  <td>
+                    {{team.name}}
+                  </td>
+                </tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

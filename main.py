@@ -1,5 +1,6 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request,redirect
 from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime
 
 
 app = Flask(__name__)
@@ -16,6 +17,11 @@ class Organization(db.Model):
 #Need to check the email ID uniqueness, now skipping that part
 #Password treating as string, need to slat it later
 #User role need backend validation as well
+class Team(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String, nullable=False)
+    users = db.relationship("User",backref="team")
+
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(150), nullable=False)
@@ -25,7 +31,7 @@ class User(db.Model):
     title = db.Column(db.String)
     role = db.Column(db.String)
     annual_leaves = db.Column(db.String)
-    team = db.Column(db.Integer)
+    team_id = db.Column(db.Integer, db.ForeignKey("team.id"))
     admin_to_team = db.Column(db.Integer)
     line_manager = db.Column(db.Integer)
     password = db.Column(db.String)
@@ -49,18 +55,12 @@ class Leave(db.Model):
     status = db.Column(db.String)
     action_by = db.Column(db.String)
 
-
-class Team(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String, nullable=False)
-
 class Message(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     sender = db.Column(db.Integer, nullable=False)
     receiver = db.Column(db.Integer, nullable=False)
     is_group = db.Column(db.Boolean, nullable=False)
     content = db.Column(db.String, nullable=False)
-
 
 class Activity_log(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -70,16 +70,47 @@ class Activity_log(db.Model):
 
 
 # db.create_all()
-# new_org = User(name="Azeez",email="navasfiroz@gmail.com")
-# db.session.add(new_org)
+# finance = Team(name="Finance")
+# db.session.add(finance)
 # db.session.commit()
-# for name in User.query.all():
-#     print(name.name)
+# navas = User(name="Navas",email="navasfiroz@gmail.com",team_id=1)
+# db.session.add(navas)
+# db.session.commit()
+
+# for user in User.query.all():
+#     print(user.team.name)
+
+@app.route('/employees/', methods=["GET","POST"])
+def employees():
+    all_team= Team.query.all()
+    all_users = User.query.all()
+    if request.method == "GET":
+        return render_template("profile.html", teams=all_team, users=all_users)
+    else:
+        name = request.form['name']
+        email = request.form['email']
+        team = request.form['team']
+        title = request.form['title']
+        role = request.form['role']
+        leaves = request.form['leaves']
+        doj = datetime.strptime(request.form['doj'],'%Y-%m-%d')
+        pay = request.form['pay']
+        new_user = User(name=name,email=email,team_id=team,role=role,annual_leaves=leaves,doj=doj,pay=pay)
+        db.session.add(new_user)
+        db.session.commit()
+        return redirect("/employees/")
 
 
-@app.route('/')
-def index_page():
-    return render_template("template.html")
+@app.route('/teams/', methods=["GET","POST"])
+def teams():
+    all_team= Team.query.all()
+    if request.method == "GET":
+        return render_template("teams.html", teams=all_team)
+    else:
+        name = request.form['team-name']
+        db.session.add(Team(name=name))
+        db.session.commit()
+        return redirect("/teams/")
 
 app.run(debug=True)
 
