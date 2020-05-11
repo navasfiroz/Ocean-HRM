@@ -1,5 +1,6 @@
-from flask import Flask, render_template, request,redirect
+from flask import Flask, render_template,request,redirect,session,url_for,g
 from flask_sqlalchemy import SQLAlchemy
+from flask_bcrypt import Bcrypt
 from datetime import datetime
 
 
@@ -7,12 +8,27 @@ app = Flask(__name__)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///main.db'
 db = SQLAlchemy(app)
+bcrypt = Bcrypt(app)
+app.config["SECRET_KEY"] = "dQOBHR4Gi5UVg8BB-EITNA"
+
+@app.before_request
+def before_request():
+    g.user = None
+    if "uid" in session:
+        login_user = User.query.get(session["uid"])
+        if login_user and login_user.team_id == session["td"] and bcrypt.check_password_hash(session["sk"], login_user.name):
+            g.user = login_user
+
+# Bcrypt syntax for generating and checking hash
+# passw = bcrypt.generate_password_hash("kl2h4448").decode("utf-8")
+# print(bcrypt.check_password_hash(passw,"kl2h4448"))
 
 class Organization(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(150), nullable=False)
     personal_info = db.Column(db.Boolean)
-    jan_to_dec_leave_cycle = db.Column(db.Boolean)
+    leave_calender = db.Column(db.Integer)
+    currency = db.Column(db.String)
 
 #Need to check the email ID uniqueness, now skipping that part
 #Password treating as string, need to slat it later
@@ -47,13 +63,14 @@ class User(db.Model):
     diet_type = db.Column(db.String)
     drinking = db.Column(db.Boolean)
     marital_status = db.Column(db.String)
+    dp = db.Column(db.String)
 
 class Leave(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     request_by = db.Column(db.Integer, nullable=False)
     category = db.Column(db.String, nullable=False)
     status = db.Column(db.String)
-    action_by = db.Column(db.String)
+    action_by = db.Column(db.String, default="default.png")
 
 class Message(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -68,8 +85,19 @@ class Activity_log(db.Model):
     action_by = db.Column(db.Integer, nullable=False)
     action_type = db.Column(db.String, nullable=False)
 
+#Set session browser cookie with 3 layer security
+def set_session_cookie(user):
+    session["uid"] = user.id
+    session["sk"] = bcrypt.generate_password_hash(user.name).decode("utf-8")
+    session["td"] = user.team_id
 
-# db.create_all()
+def clear_session_cookie():
+    session.pop("uid", None)
+    session.pop("sk", None)
+    session.pop("td", None)
+
+
+db.create_all()
 # finance = Team(name="Finance")
 # db.session.add(finance)
 # db.session.commit()
@@ -80,12 +108,62 @@ class Activity_log(db.Model):
 # for user in User.query.all():
 #     print(user.team.name)
 
+
+@app.route('/sign-in/', methods=["GET","POST"])
+def sign_in():
+    if request.method == "POST":
+        req = request.form
+        email = request.form['email']
+        password = req['password']
+
+        user = User.query.filter_by(email=email).first()
+        if user and bcrypt.check_password_hash(user.password, password):
+            set_session_cookie(user)
+            return redirect(url_for("teams"))
+        else:
+            return render_template("login.html")
+    else:
+        return render_template("login.html")
+
+@app.route('/sign-out/')
+def sign_out():
+    clear_session_cookie()
+    return redirect(url_for("sign_in"))
+
+@app.route('/start/',methods=["GET","POST"])
+def start():
+    if request.method == "POST":
+        user_name = request.form['user_name']
+        user_email = request.form['email']
+        user_password = bcrypt.generate_password_hash(request.form['password']).decode("utf-8")
+        org_name = request.form['name']
+        org_currency = request.form['currency']
+        org_leave_policy = request.form['leave_calender']
+
+        db.session.add(Team(name="Administration"))
+        db.session.commit()
+        admin = User(name=user_name,email=user_email,password=user_password,role=4,team_id=1)
+        db.session.add(admin)
+        db.session.commit()
+
+        user = User.query.filter_by(email=user_email).first()
+        set_session_cookie(user)
+
+        org = Organization(name=org_name,currency=org_currency,leave_calender=org_leave_policy)
+        db.session.add(org)
+        db.session.commit()
+
+        return redirect("/teams/")
+
+    else:
+        return render_template("org_register.html")
+
 @app.route('/employees/', methods=["GET","POST"])
 def employees():
     all_team= Team.query.all()
     all_users = User.query.all()
     if request.method == "GET":
-        return render_template("profile.html", teams=all_team, users=all_users)
+        return render_template("employees.html", teams=all_team, users=all_users)
     else:
         name = request.form['name']
         email = request.form['email']
@@ -112,5 +190,16 @@ def teams():
         db.session.commit()
         return redirect("/teams/")
 
+
+@app.route('/profile/<user_id>')
+def profile(user_id):
+    user = User.query.get(user_id)
+    if user:
+        return render_template("user_profile.html", user=user)
+    else:
+        return redirect(url_for("employees"))
+
+
 app.run(debug=True)
+
 

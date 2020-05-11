@@ -1,0 +1,60 @@
+{% extends "template.html" %}
+{% block title %}
+<title>Register an Organization</title>
+{% endblock %}
+{% block heading %}
+<h2>Create Company Profile</h2>
+{% endblock %}
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-md-8">
+
+          <form action="/start/" method="POST">
+                <h3>Company Informations</h3>
+                <br/>
+                <div class="form-group bmd-form-group">
+                  <label for="name">Company Name</label>
+                  <input type="text" name="name" id="name" class="form-control">
+                </div>
+                <div class="form-group bmd-form-group">
+                  <label for="currency">Currency</label>
+                    <select class="form-control selectpicker" data-style="btn btn-link" name="currency" id="currency">
+                      <option value="USD">USD</option>
+                      <option value="AED">AED</option>
+                      <option value="INR">INR</option>
+                      <option value="EUR">EUR</option>
+                    </select>
+                </div>
+                <div class="form-group bmd-form-group">
+                  <label for="leave_calender">Leave Calender</label>
+                    <select class="form-control selectpicker" data-style="btn btn-link" name="leave_calender" id="leave_calender">
+                      <option value="1">Jan - Dec</option>
+                      <option value="2">Joining Date to Date</option>
+                    </select>
+                </div>
+                <br/>
+                <h3>Admin Informations</h3>
+                <br/>
+                <div class="form-group bmd-form-group">
+                  <label for="user_name">Full Name</label>
+                  <input type="text" name="user_name" id="user_name" class="form-control">
+                </div>
+                <div class="form-group bmd-form-group">
+                  <label for="email">Admin Email</label>
+                  <input type="text" name="email" id="email" class="form-control">
+                </div>
+                <div class="form-group bmd-form-group">
+                  <label for="password">Password</label>
+                  <input type="password" name="password" id="password" class="form-control">
+                </div>
+                <div class="form-group bmd-form-group">
+                  <label for="re_password">Repeat Password</label>
+                  <input type="password" name="re_password" id="re_password" class="form-control">
+                </div>
+              <button type="submit" class="btn btn-primary pull-right">Create</button>
+          </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

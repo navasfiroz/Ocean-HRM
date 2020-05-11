@@ -1,0 +1,11 @@
+.sidebar {
+	background: #3F51B5;
+	color:white;
+	box-shadow: none !important;}
+body {
+    background-color: #fff; }
+
+.sidebar .nav li a, .sidebar .nav li .dropdown-menu a {
+    color: #ffffff !important; }
+.card-profile .card-avatar {
+    box-shadow: none !important; }
