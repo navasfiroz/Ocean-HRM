@@ -1,9 +1,10 @@
 from flask import Flask, render_template,request,redirect,session,url_for,g
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
-from datetime import datetime
+from datetime import datetime, date
 import os
 from werkzeug.utils import secure_filename
+import secrets
 
 
 app = Flask(__name__)
@@ -12,7 +13,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///main.db'
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 app.config["SECRET_KEY"] = "dQOBHR4Gi5UVg8BB-EITNA"
-app.config['UPLOAD_FOLDER'] = "/static/img/users"
+app.config['UPLOAD_FOLDER'] = "static/img/users/"
 ALLOWED_EXTENSIONS = set(['jpg', 'jpeg'])
 
 
@@ -36,12 +37,35 @@ class Organization(db.Model):
     currency = db.Column(db.String)
 
 #Need to check the email ID uniqueness, now skipping that part
-#Password treating as string, need to slat it later
 #User role need backend validation as well
 class Team(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False)
     users = db.relationship("User",backref="team")
+
+class Leave(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    category = db.Column(db.String, nullable=False)
+    status = db.Column(db.String)
+    created_date = db.Column(db.DateTime)
+    leave_from = db.Column(db.DateTime)
+    leave_to = db.Column(db.DateTime)
+    message = db.Column(db.String)
+    action_by = db.Column(db.String)
+
+class Message(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    sender = db.Column(db.Integer, nullable=False)
+    receiver = db.Column(db.Integer, nullable=False)
+    is_group = db.Column(db.Boolean, nullable=False)
+    content = db.Column(db.String, nullable=False)
+
+class Activity_log(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    time = db.Column(db.DateTime)
+    action_by = db.Column(db.Integer, nullable=False)
+    action_type = db.Column(db.String, nullable=False)
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -68,27 +92,8 @@ class User(db.Model):
     diet_type = db.Column(db.String)
     drinking = db.Column(db.Boolean)
     marital_status = db.Column(db.String)
-    dp = db.Column(db.String)
-
-class Leave(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    request_by = db.Column(db.Integer, nullable=False)
-    category = db.Column(db.String, nullable=False)
-    status = db.Column(db.String)
-    action_by = db.Column(db.String, default="default.png")
-
-class Message(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    sender = db.Column(db.Integer, nullable=False)
-    receiver = db.Column(db.Integer, nullable=False)
-    is_group = db.Column(db.Boolean, nullable=False)
-    content = db.Column(db.String, nullable=False)
-
-class Activity_log(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    time = db.Column(db.DateTime)
-    action_by = db.Column(db.Integer, nullable=False)
-    action_type = db.Column(db.String, nullable=False)
+    dp = db.Column(db.String, default="default.png")
+    leaves = db.relationship("Leave",backref="requested_by")
 
 #Set session browser cookie with 3 layer security
 def set_session_cookie(user):
@@ -101,6 +106,8 @@ def clear_session_cookie():
     session.pop("sk", None)
     session.pop("td", None)
 
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 db.create_all()
 # finance = Team(name="Finance")
@@ -207,13 +214,39 @@ def profile(user_id):
 @app.route('/edit-profile/', methods=["GET","POST"])
 def edit_profile():
     if request.method == "POST":
-        image = request.files['file']
+
+        #Check for DP update and upload to FTP
+        image = request.files['image']
         if image.filename != "" and image and allowed_file(image.filename):
             filename = secure_filename(image.filename)
-            image.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            hash_token = secrets.token_urlsafe(16)
+            extn = filename.rsplit('.', 1)[1].lower()
+            current_dp = hash_token+"."+extn
+            image.save(os.path.join(app.config['UPLOAD_FOLDER'], current_dp))
+            session_user = User.query.get(g.user.id)
+            session_user.dp = current_dp
+            db.session.commit()
+
         return redirect(url_for("edit_profile"))
     else:
         return render_template("edit_profile.html")
+
+@app.route('/leaves/', methods=["GET","POST"])
+def leaves():
+    if request.method == "POST":
+        from_date = datetime.strptime(request.form['from'],'%Y-%m-%d')
+        to_date = datetime.strptime(request.form['to'],'%Y-%m-%d')
+        category = request.form['category']
+        message = request.form['message']
+        created_date = date.today()
+
+        leave_req = Leave(user_id=g.user.id,category=category,status="Pending",created_date=created_date,leave_from=from_date,leave_to=to_date,message=message)
+        db.session.add(leave_req)
+        db.session.commit()
+        return redirect(url_for("leaves"))
+
+    else:
+        return render_template("leaves.html")
 
 app.run(debug=True)
 

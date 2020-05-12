@@ -3,7 +3,8 @@
 	color:white;
 	box-shadow: none !important;}
 body {
-    background-color: #fff; }
+    background-color: #fff;
+    font-weight: 400; }
 
 .sidebar .nav li a, .sidebar .nav li .dropdown-menu a {
     color: #ffffff !important; }
@@ -16,4 +17,8 @@ body {
 }
 .sidebar .nav i {
     color: #ffffff;
+}
+img.img.nav-icon {
+    max-width: 35px;
+    border-radius: 100%;
 }

@@ -9,10 +9,10 @@
 <div class="container-fluid">
   <div class="row">
     <div class="col-md-6">
-          <form action="/edit-profile/" method="POST">
+          <form action="/edit-profile/" method="POST" enctype="multipart/form-data">
             <div class="card card-profile">
               <div class="card-avatar">
-                  <img class="img" src="/static/img/users/default.png">
+                  <img class="img" src="/static/img/users/{{g.user.dp}}">
               </div>
               <div class="card-body">
                 <h4>Choose a JPG format Image to update dp</h4><br/>

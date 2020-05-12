@@ -13,7 +13,7 @@
 			<div class="card card-profile">
 				<div class="card-avatar">
 					<a href="javascript:;">
-						<img class="img" src="{{ url_for('static', filename='img/users/default.png') }}">
+						<img class="img" src="/static/img/users/{{user.dp}}">
 					</a>
 				</div>
 				<div class="card-body">
@@ -43,6 +43,7 @@
                 <tr><td>Drinking Preference :</td><td>{{user.drinking}}</td></tr>
               </tbody>
             </table>
+            <a href="/edit-profile/"><button type="submit" class="btn btn-primary pull-center">Edit Profile</button></a>
           </div>
 
 		</div>

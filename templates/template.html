@@ -36,13 +36,13 @@
               <p>Login</p>
             </a>
           </li>
-        {% else %}
           <li class="nav-item">
             <a class="nav-link" href="/start/">
               <i class="material-icons">dashboard</i>
               <p>Start</p>
             </a>
           </li>
+        {% else %}
           <li class="nav-item">
             <a class="nav-link" href="/teams/">
               <i class="material-icons">group</i>
@@ -53,6 +53,12 @@
             <a class="nav-link" href="/employees/">
               <i class="material-icons">face</i>
               <p>Employees</p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/leaves/">
+              <i class="material-icons">card_travel</i>
+              <p>Leaves</p>
             </a>
           </li>
         {% endif %}
@@ -94,7 +100,7 @@
               </li>
               <li class="nav-item dropdown">
                 <a class="nav-link" href="javascript:;" id="navbarDropdownProfile" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                  <i class="material-icons">person</i>
+                  <img class="img nav-icon" src="/static/img/users/{{g.user.dp}}">
                   <p class="d-lg-none d-md-block">
                     Account
                   </p>

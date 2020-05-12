@@ -1,0 +1,94 @@
+{% extends "template.html" %}
+{% block title %}
+<title>Manage Leaves</title>
+{% endblock %}
+{% block heading %}
+<h2>Manage Leaves</h2>
+{% endblock %}
+{% block content %}
+<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#add-leave">
+  Request Leave
+</button>
+<div class="modal fade" id="add-leave" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLabel">Request Leave</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="card-body">
+          <form action="/leaves/" method="POST">
+            <br>
+            <div class="form-group bmd-form-group">
+              <label for="from">From Date</label>
+              <input type="date" class="form-control" name="from" id="from" required>
+            </div>
+            <br>
+            <div class="form-group bmd-form-group">
+              <label for="to">To Date</label>
+              <input type="date" class="form-control" name="to" id="to" required>
+            </div>
+            <br>
+            <div class="form-group bmd-form-group">
+              <label for="category">Type</label>
+              <select class="form-control selectpicker" data-style="btn btn-link" name="category" id="category">
+                <option value="1">Holiday</option>
+                <option value="2">Sick</option>
+              </select>
+            </div>
+            <br/>
+            <div class="form-group">
+              <label for="message">Explain a bit</label>
+              <textarea class="form-control" id="message" name="message" rows="3"></textarea>
+            </div>
+          <button type="submit" class="btn btn-primary pull-right">Send Request</button>
+          <div class="clearfix"></div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<div class="col-md-12">
+  <div class="card">
+    <h3>All Members</h3>
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table">
+          <thead class=" text-primary">
+            <tr>
+            <th>From Date</th>
+            <th>To Date</th>
+            <th>Duration</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr></thead>
+          <tbody>
+            {% for leave in g.user.leaves%}
+            <tr>
+              <td>{{leave.leave_from.strftime('%Y-%m-%d')}}</td>
+              <td>{{leave.leave_to.strftime('%Y-%m-%d')}}</td>
+              <td></td>
+              <td>{% if leave.category == "1" %}
+                    Holiday
+                  {% else %}
+                    Sick
+                  {% endif %}
+              </td>
+              <td>{{leave.status}}</td>
+              <td><button type="button" rel="tooltip" class="btn btn-danger" data-original-title="" title="">
+                    <i class="material-icons">close</i> Cancel
+                  <div class="ripple-container"></div></button></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
