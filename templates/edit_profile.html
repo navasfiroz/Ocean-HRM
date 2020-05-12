@@ -1,0 +1,77 @@
+{% extends "template.html" %}
+{% block title %}
+<title>Create Profile</title>
+{% endblock %}
+{% block heading %}
+<h2>Employee Profiles</h2>
+{% endblock %}
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-md-6">
+          <form action="/employees/" method="POST">
+            <br>
+            <div class="form-group bmd-form-group">
+              <label for="name">Full Name</label>
+              <input type="text" class="form-control" value="{{g.user.name}}" name="name" id="name" required>
+            </div>
+            <br>
+            <div class="form-group bmd-form-group">
+              <label for="email">Email ID</label>
+              <input type="email" name="email" value="{{g.user.email}}" id="email" class="form-control" required>
+            </div>
+            <br>
+            <div class="form-group bmd-form-group">
+              <label for="phone">Phone</label>
+              <input type="text" name="phone" value="{{g.user.phone}}" id="phone" class="form-control" required>
+            </div>
+            <br>
+            <div class="form-check">
+              <label class="form-check-label">
+                <input class="form-check-input" type="checkbox" value="">
+                  WhatsApp enabled on this number?
+                  <span class="form-check-sign">
+                  <span class="check"></span>
+                  </span>
+              </label>
+            </div>
+            <br/>
+            <div class="form-group bmd-form-group">
+              <label for="dob">Date of Birth</label>
+              <input type="date" value="{{g.user.dob}}" class="form-control" name="dob" id="dob" required>
+            </div>
+            <br/>
+            <div class="form-group bmd-form-group">
+              <label for="blood_group">Blood Group</label>
+              <input type="text" value="{{g.user.blood_group}}" class="form-control" name="blood_group" id="blood_group" required>
+            </div>
+            <br/>
+            <div class="form-group bmd-form-group">
+              <label for="address">Address</label>
+              <input type="text" value="{{g.user.address}}" class="form-control" name="address" id="address" required>
+            </div><br/>
+            <h4>Secondary Contact</h4>
+            <label>Incase any emergency</label>
+            <br/><br/>
+            <div class="form-group bmd-form-group">
+              <label for="s_name">Name</label>
+              <input type="text" value="{{g.user.address}}" class="form-control" name="s_name" id="s_name" required>
+            </div><br/>
+            <div class="form-group bmd-form-group">
+              <label for="s_relate">Relation with you</label>
+              <input type="text" value="{{g.user.address}}" class="form-control" name="s_relate" id="s_relate" required>
+            </div><br/>
+            <div class="form-group bmd-form-group">
+              <label for="s_phone">Phone Number</label>
+              <input type="text" value="{{g.user.address}}" class="form-control" name="s_phone" id="s_phone" required>
+            </div><br/>
+            <br/>
+
+
+          <button type="submit" class="btn btn-primary pull-right">Update Profile</button>
+          <div class="clearfix"></div>
+        </form>
+</div>
+</div>
+</div>
+{% endblock %}

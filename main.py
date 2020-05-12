@@ -199,6 +199,9 @@ def profile(user_id):
     else:
         return redirect(url_for("employees"))
 
+@app.route('/edit-profile/')
+def edit_profile():
+    return render_template("edit_profile.html")
 
 app.run(debug=True)
 
