@@ -7,5 +7,13 @@ body {
 
 .sidebar .nav li a, .sidebar .nav li .dropdown-menu a {
     color: #ffffff !important; }
-.card-profile .card-avatar {
+.card, .card-profile .card-avatar {
     box-shadow: none !important; }
+.sidebar .logo img {
+    max-width: 120px;
+    margin: 0 auto;
+    display: block;
+}
+.sidebar .nav i {
+    color: #ffffff;
+}

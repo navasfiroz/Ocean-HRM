@@ -9,7 +9,18 @@
 <div class="container-fluid">
   <div class="row">
     <div class="col-md-6">
-          <form action="/employees/" method="POST">
+          <form action="/edit-profile/" method="POST">
+            <div class="card card-profile">
+              <div class="card-avatar">
+                  <img class="img" src="/static/img/users/default.png">
+              </div>
+              <div class="card-body">
+                <h4>Choose a JPG format Image to update dp</h4><br/>
+                <input type="file" name="image" id="image" accept=".jpg" />
+              </div>
+            </div>
+                  
+                
             <br>
             <div class="form-group bmd-form-group">
               <label for="name">Full Name</label>

@@ -2,6 +2,8 @@ from flask import Flask, render_template,request,redirect,session,url_for,g
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from datetime import datetime
+import os
+from werkzeug.utils import secure_filename
 
 
 app = Flask(__name__)
@@ -10,6 +12,9 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///main.db'
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 app.config["SECRET_KEY"] = "dQOBHR4Gi5UVg8BB-EITNA"
+app.config['UPLOAD_FOLDER'] = "/static/img/users"
+ALLOWED_EXTENSIONS = set(['jpg', 'jpeg'])
+
 
 @app.before_request
 def before_request():
@@ -199,9 +204,16 @@ def profile(user_id):
     else:
         return redirect(url_for("employees"))
 
-@app.route('/edit-profile/')
+@app.route('/edit-profile/', methods=["GET","POST"])
 def edit_profile():
-    return render_template("edit_profile.html")
+    if request.method == "POST":
+        image = request.files['file']
+        if image.filename != "" and image and allowed_file(image.filename):
+            filename = secure_filename(image.filename)
+            image.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        return redirect(url_for("edit_profile"))
+    else:
+        return render_template("edit_profile.html")
 
 app.run(debug=True)
 
