@@ -51,9 +51,8 @@
               <label for="role">Permission Role</label>
               <select class="form-control selectpicker" data-style="btn btn-link" name="role" id="role">
                 <option value="1">Employee</option>
-                <option value="2">Team Lead</option>
-                <option value="3">Manager</option>
-                <option value="4">Admin</option>
+                <option value="2">Manager</option>
+                <option value="3">Admin</option>
               </select>
             </div>
             <br>
@@ -111,7 +110,7 @@
             {% for user in users%}
             <tr>
               <td>
-                {{user.id}}
+                <img class="img nav-icon" src="/static/img/users/{{user.dp}}">
               </td>
               <td>
                 <a href="/profile/{{user.id}}">{{user.name}}</a>

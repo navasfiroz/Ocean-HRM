@@ -1,10 +1,12 @@
 from flask import Flask, render_template,request,redirect,session,url_for,g
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import os
 from werkzeug.utils import secure_filename
 import secrets
+from flask_mail import Mail, Message
+from responses import *
 
 
 app = Flask(__name__)
@@ -12,9 +14,19 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///main.db'
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
+
 app.config["SECRET_KEY"] = "dQOBHR4Gi5UVg8BB-EITNA"
 app.config['UPLOAD_FOLDER'] = "static/img/users/"
 ALLOWED_EXTENSIONS = set(['jpg', 'jpeg'])
+
+app.config['MAIL_SERVER'] = 'in-v3.mailjet.com'
+app.config['MAIL_PORT'] = 465
+app.config['MAIL_USE_SSL'] = True
+app.config['MAIL_USERNAME'] = 'c897cb0eac91180c139a6700b4baabb0'
+app.config['MAIL_PASSWORD'] = '3a189e06a85e1c87e4e6800a66bb3995'
+app.config['MAIL_MAX_EMAILS'] = 5
+app.config['MAIL_DEFAULT_SENDER'] = "tripeagle2019@gmail.com"
+mail = Mail(app)
 
 
 @app.before_request
@@ -35,6 +47,9 @@ class Organization(db.Model):
     personal_info = db.Column(db.Boolean)
     leave_calender = db.Column(db.Integer)
     currency = db.Column(db.String)
+    week_start = db.Column(db.Integer)
+    week_off = db.Column(db.String)
+    
 
 #Need to check the email ID uniqueness, now skipping that part
 #User role need backend validation as well
@@ -43,18 +58,32 @@ class Team(db.Model):
     name = db.Column(db.String, nullable=False)
     users = db.relationship("User",backref="team")
 
+class Team_lead(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    team_id = db.Column(db.Integer, db.ForeignKey("team.id"))
+    manager = db.relationship("User",backref="leading")
+    team = db.relationship("Team", backref="lead")
+
 class Leave(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     category = db.Column(db.String, nullable=False)
-    status = db.Column(db.String)
-    created_date = db.Column(db.DateTime)
-    leave_from = db.Column(db.DateTime)
-    leave_to = db.Column(db.DateTime)
+    created_date = db.Column(db.Date)
+    from_date = db.Column(db.Date)
+    to_date = db.Column(db.Date)
     message = db.Column(db.String)
-    action_by = db.Column(db.String)
+    
+class Leave_action(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    leave_id = db.Column(db.Integer, db.ForeignKey("leave.id"))
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    #Status 1=Approve, 2=Decline, 3=Cancelled 
+    status = db.Column(db.Integer)
+    leaves = db.relationship("Leave",backref="action")
+    actioned_by = db.relationship("User",backref="actioned_leaves")
 
-class Message(db.Model):
+class Chat(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     sender = db.Column(db.Integer, nullable=False)
     receiver = db.Column(db.Integer, nullable=False)
@@ -63,9 +92,23 @@ class Message(db.Model):
 
 class Activity_log(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    time = db.Column(db.DateTime)
+    time = db.Column(db.Date)
     action_by = db.Column(db.Integer, nullable=False)
     action_type = db.Column(db.String, nullable=False)
+
+class Access_token(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    created_date = db.Column(db.Date)
+    key = db.Column(db.String)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    user = db.relationship("User", backref="token")
+
+class Holiday(db.Model):
+    id =db.Column(db.Integer, primary_key=True)
+    start_date = db.Column(db.Date)
+    end_date = db.Column(db.Date)
+    name = db.Column(db.String)
+    description = db.Column(db.String)
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -74,15 +117,14 @@ class User(db.Model):
     phone = db.Column(db.String)
     whatsapp = db.Column(db.Boolean)
     title = db.Column(db.String)
-    role = db.Column(db.String)
+    #User roles -> 1=Employee, 2=Manager, 3=Admin
+    role = db.Column(db.Integer)
     annual_leaves = db.Column(db.String)
     team_id = db.Column(db.Integer, db.ForeignKey("team.id"))
-    admin_to_team = db.Column(db.Integer)
-    line_manager = db.Column(db.Integer)
     password = db.Column(db.String)
-    dob = db.Column(db.DateTime)
+    dob = db.Column(db.Date)
     blood_group = db.Column(db.String)
-    doj = db.Column(db.DateTime)
+    doj = db.Column(db.Date)
     pay = db.Column(db.Integer)
     address = db.Column(db.String)
     secondary_contact_name = db.Column(db.String)
@@ -120,6 +162,33 @@ db.create_all()
 # for user in User.query.all():
 #     print(user.team.name)
 
+@app.route('/')
+def overview():
+    summary = this_week_summary()
+    dicto = stats(date.today(), 10)
+    high = max(dicto.values())+3
+    return render_template("overview.html", summary=summary, key=json.dumps(list(dicto.keys())), val=json.dumps(list(dicto.values())),high=json.dumps(high))
+
+@app.route('/calendar/', methods=["GET","POST"])
+def calendar():
+    events = calender_events()
+    if request.method == "GET":
+        return render_template("calendar.html", events=json.dumps(events))
+    else:
+        name = request.form['name']
+        start = datetime.strptime(request.form['from'],'%Y-%m-%d').date()
+        end = datetime.strptime(request.form['end'],'%Y-%m-%d').date()
+        message =request.form['message']
+        announce =request.form.get('announce')
+        holiday = Holiday(name=name,start_date=start,end_date=end,description=message)
+        db.session.add(holiday)
+        db.session.commit()
+        if announce:
+            users = User.query.filter(User.password.isnot(None)).all()
+            for user in users:
+                send_holiday_announcement(name, start, end, user)
+        return render_template("calendar.html", events=json.dumps(events),response=response("s2"))
+
 
 @app.route('/sign-in/', methods=["GET","POST"])
 def sign_in():
@@ -131,9 +200,9 @@ def sign_in():
         user = User.query.filter_by(email=email).first()
         if user and bcrypt.check_password_hash(user.password, password):
             set_session_cookie(user)
-            return redirect(url_for("teams"))
+            return redirect(url_for("overview"))
         else:
-            return render_template("login.html")
+            return render_template("login.html",response=response("e1"))
     else:
         return render_template("login.html")
 
@@ -154,7 +223,7 @@ def start():
 
         db.session.add(Team(name="Administration"))
         db.session.commit()
-        admin = User(name=user_name,email=user_email,password=user_password,role=4,team_id=1)
+        admin = User(name=user_name,email=user_email,password=user_password,role=3,team_id=1)
         db.session.add(admin)
         db.session.commit()
 
@@ -183,13 +252,47 @@ def employees():
         title = request.form['title']
         role = request.form['role']
         leaves = request.form['leaves']
-        doj = datetime.strptime(request.form['doj'],'%Y-%m-%d')
+        doj = datetime.strptime(request.form['doj'],'%Y-%m-%d').date()
         pay = request.form['pay']
         new_user = User(name=name,email=email,team_id=team,role=role,annual_leaves=leaves,doj=doj,pay=pay)
         db.session.add(new_user)
         db.session.commit()
-        return redirect("/employees/")
 
+        #Create an access token
+        user = User.query.filter_by(email=email).first()
+        token = secrets.token_urlsafe(20)
+        created_date = date.today()
+        access_token = Access_token(key=token,user_id=user.id,created_date=created_date)
+        db.session.add(access_token)
+        db.session.commit()
+
+        link = "http://127.0.0.1:5000/reset/"+str(user.id)+"/"+token+"/"
+        subject = user.name+", your invitation to Hexa HRM"
+        send_activation_mail(subject,g.user,user,link)
+        return render_template("employees.html", teams=all_team, users=all_users, response=response("s2"))
+
+@app.route('/reset/<user_id>/<token>/', methods=["GET","POST"])
+def check_token(user_id,token):
+    user = User.query.get(user_id)
+    if user and user.token:
+        key = user.token[0].key
+        if key == token:
+            clear_session_cookie()
+            if request.method == "GET":
+                return render_template("password-reset.html", id=user_id, token=token, user=user)
+            else:
+                password = request.form['password']
+                if password != "":
+                    user.password = bcrypt.generate_password_hash(password).decode("utf-8")
+                    db.session.delete(user.token[0])
+                    db.session.commit()
+                else:
+                    return redirect(url_for("check_token",user_id=user_id,token=token))
+                return redirect(url_for("sign_in"))
+        else:
+            return render_template("lost.html")
+    else:
+        return render_template("lost.html")
 
 @app.route('/teams/', methods=["GET","POST"])
 def teams():
@@ -200,10 +303,27 @@ def teams():
         name = request.form['team-name']
         db.session.add(Team(name=name))
         db.session.commit()
-        return redirect("/teams/")
+        return render_template("teams.html", teams=all_team, response=response("s2"))
+
+@app.route('/teams/<team_id>/', methods=["GET","POST"])
+def team_profile(team_id):
+    if request.method == "GET":
+        team = Team.query.get(team_id)
+        users = User.query.all()
+        if team:
+            return render_template("team_profile.html", team=team, users=users)
+        else:
+            return redirect(url_for("teams"))
+    else:
+        user_id = request.form["user"]
+        if user_id:
+            team_lead = Team_lead(user_id=user_id,team_id=team_id)
+            db.session.add(team_lead)
+            db.session.commit()
+        return redirect(url_for("team_profile",team_id=team_id))
 
 
-@app.route('/profile/<user_id>')
+@app.route('/profile/<user_id>/')
 def profile(user_id):
     user = User.query.get(user_id)
     if user:
@@ -224,30 +344,283 @@ def edit_profile():
             current_dp = hash_token+"."+extn
             image.save(os.path.join(app.config['UPLOAD_FOLDER'], current_dp))
             session_user = User.query.get(g.user.id)
+            os.remove(os.path.join(app.config['UPLOAD_FOLDER'], session_user.dp))
             session_user.dp = current_dp
             db.session.commit()
 
-        return redirect(url_for("edit_profile"))
+        return render_template("edit_profile.html", response=response("s3"))
     else:
         return render_template("edit_profile.html")
 
 @app.route('/leaves/', methods=["GET","POST"])
 def leaves():
     if request.method == "POST":
-        from_date = datetime.strptime(request.form['from'],'%Y-%m-%d')
-        to_date = datetime.strptime(request.form['to'],'%Y-%m-%d')
+        from_date = datetime.strptime(request.form['from'],'%Y-%m-%d').date()
+        to_date = datetime.strptime(request.form['to'],'%Y-%m-%d').date()
         category = request.form['category']
         message = request.form['message']
         created_date = date.today()
 
-        leave_req = Leave(user_id=g.user.id,category=category,status="Pending",created_date=created_date,leave_from=from_date,leave_to=to_date,message=message)
+        leave_req = Leave(user_id=g.user.id,category=category,created_date=created_date,from_date=from_date,to_date=to_date,message=message)
         db.session.add(leave_req)
         db.session.commit()
-        return redirect(url_for("leaves"))
+
+        length = count_leaves(from_date,to_date)
+        user = User.query.get(g.user.id)
+        user.annual_leaves = int(user.annual_leaves) - length
+        db.session.commit()
+
+        admins = User.query.filter_by(role=3).all()
+        for user in admins:
+            send_request_mail(from_date,to_date,category,user)
+        return render_template("leaves.html", response=response("s1"))
 
     else:
         return render_template("leaves.html")
 
-app.run(debug=True)
+@app.route('/leaves/action/<action>/<id>')
+def leave_action(action,id):
+    leave = Leave.query.get(id)
+    if g.user.role == 3 or leave.requested_by.line_manager == g.user.role:
+        if action == "d":
+            action = Leave_action(leave_id=leave.id,user_id=g.user.id,status=2)
+            length = count_leaves(leave.from_date,leave.to_date)
+            user = leave.requested_by
+            user.annual_leaves = int(user.annual_leaves) + length
+        elif action == "a":
+            action = Leave_action(leave_id=leave.id,user_id=g.user.id,status=1)
+        db.session.add(action)
+        db.session.commit()
+        send_action_mail(leave)
+    return redirect(url_for("requests"))
+
+@app.route('/requests/')
+def requests():
+    dicto = stats(date.today(), 45)
+    high = max(dicto.values())+2
+    all_leaves = Leave.query.all()
+    return render_template("requests.html", leaves=all_leaves,key=json.dumps(list(dicto.keys())), val=json.dumps(list(dicto.values())),high=json.dumps(high))
+
+@app.route('/company/settings/', methods=["GET","POST"])
+def company_set():
+    if request.method == "POST":
+        #Update company logo
+        image = request.files['image']
+        if image.filename != "" and image and allowed_file(image.filename):
+            filename = secure_filename(image.filename)
+            image.save(os.path.join(app.config['UPLOAD_FOLDER'], "company.jpg"))
+        name = request.form['name']
+        leave_calender = request.form['leave_calender']
+        week_start = request.form['week_start']
+        currency = request.form['currency']
+        day_list = []
+        day_list.append(request.form.get('sunday'))
+        day_list.append(request.form.get("monday"))
+        day_list.append(request.form.get("tuesday"))
+        day_list.append(request.form.get("wednesday"))
+        day_list.append(request.form.get("thursday"))
+        day_list.append(request.form.get("friday"))
+        day_list.append(request.form.get("saturday"))
+        off_days = ""
+        for day in day_list:
+            if day:
+                off_days += day+","
+
+        company = Organization.query.get(1)
+        company.name = name
+        company.leave_calender = leave_calender
+        company.week_start = week_start
+        company.week_off = off_days.rstrip(',')
+        company.currency = currency
+        db.session.commit()
+
+    company = Organization.query.first()
+    weekends = list(map(int, company.week_off.split(",")))
+    return render_template("company_settings.html",company=company,weekends=weekends)
 
 
+def this_week_summary():
+    dic=[]
+    week = week_range()
+    from_d = week["start"]
+    to_date = week["end"]
+    leaves = get_leaves(from_d,to_date)
+    birthday = get_birthdays(from_d,to_date)
+    holidays = get_holidays(from_d,to_date)
+    dic.append(leaves)
+    dic.append(birthday)
+    dic.append(holidays)
+    return dic
+
+def get_leaves(from_d,to_date):
+    dic = [] 
+    leaves = Leave.query.filter(Leave.to_date >= from_d).filter(Leave.from_date <= to_date).filter(Leave.action.any(status=1)).all()
+    for leave in leaves:
+        item = {}
+        user = leave.requested_by
+        item["user_id"] = user.id
+        item["user_dp"] = user.dp
+        item["user_name"] = user.name
+        item["leave_category"] = leave.category
+        item["leave_till"] = leave.to_date
+        dic.append(item)
+    return dic
+
+def get_birthdays(from_d,to_date):
+    dic = []
+    users = User.query.filter(User.password.isnot(None)).all()
+    for user in users:
+        if user.dob >= from_d.replace(year=user.dob.year) and user.dob <= to_date.replace(year=user.dob.year):
+            item = {}
+            item["user_id"] = user.id
+            item["user_dp"] = user.dp
+            item["user_name"] = user.name
+            item["dob"] = user.dob
+            dic.append(item)
+    return dic
+
+def get_holidays(from_d,to_date):
+    dic = []
+    holidays = Holiday.query.filter(Holiday.end_date >= from_d).filter(Holiday.start_date <= to_date).all()
+    for holiday in holidays:
+        item = {}
+        item["name"] = holiday.name
+        item["from"] = holiday.start_date
+        item["to"] = holiday.end_date
+        dic.append(item)
+    return dic
+
+def week_range():
+    today = date.today()
+    today += timedelta(days=6)
+    idx = (today.weekday() + 1) % 7
+    #Sun =0, Sat =6, Fri =5, Thu =4, Wed =3, Tue =2, Mon=1
+    start = today - timedelta(7+idx-1)
+    end = start + timedelta(days=6)
+    days = {"start":start,"end":end}
+    return days
+
+def count_leaves(from_date,end_date):
+    week_off = Organization.query.get(1).week_off
+    weekends = list(map(int, week_off.split(",")))
+    #weekday -> Monday=0, Tuesday=1 etc.
+    count = 0
+    starting = from_date
+    while from_date <= end_date:
+        if from_date.weekday() in weekends:
+            count +=1
+        elif Holiday.query.filter(Holiday.start_date <= from_date).filter(Holiday.end_date >= from_date).scalar():
+            count +=1
+        from_date += timedelta(days=1)
+    date_range = end_date - starting
+    leave_length = (date_range.days +1) - count
+    return leave_length
+
+def calender_events():
+    #daysOfWeek -> Sunday=0, Monday=1 etc.
+    holiday_list = []
+    week_off = Organization.query.get(1).week_off
+    weekends = list(map(int, week_off.split(",")))
+    for day in weekends:
+        if day == 6:
+            day_id = 0
+        else:
+            day_id = day+1
+        item  ={}
+        item["daysOfWeek"] = [day_id]
+        item["title"] = "Weekend"
+        item["classNames"] = 'week-holiday'
+        holiday_list.append(item)
+    holidays = Holiday.query.all()
+    for holiday in holidays:
+        item = {}
+        item["title"] = holiday.name
+        item["start"] = holiday.start_date.strftime("%Y-%m-%d")
+        end = holiday.end_date+ timedelta(days=1)
+        item["end"] = end.strftime("%Y-%m-%d")
+        holiday_list.append(item)
+    return holiday_list
+
+def stats(from_d, length):
+    dic = {}
+    to_d = date.today() + timedelta(days=length)
+    leaves = Leave.query.filter(Leave.to_date >= from_d).filter(Leave.from_date <= to_d).filter(Leave.action.any(status=1)).all()
+    
+    while from_d <= to_d:
+        count = 0
+        for leave in leaves:
+            if leave.from_date <= from_d and leave.to_date >= from_d:
+                count+=1
+        dic[from_d.strftime("%d %b %Y")] = count
+        from_d += timedelta(days=1)
+
+    return dic
+
+
+
+
+    return str(leaves[0].to_date)
+
+
+def send_activation_mail(subject,sender,reciever,link):
+    msg = Message(subject,
+                  recipients=[reciever.email])
+    msg.body = "" 
+    msg.html = render_template('emails/activation.html', sender=sender,reciever=reciever,link=link)       
+    mail.send(msg)
+    return True
+
+def send_action_mail(leave):
+    if leave.action[0].status == 1:
+        status = "Approved"
+    elif leave.action[0].status == 2:
+        status = "Declined"
+
+    receiver = leave.requested_by
+    sender = leave.action[0].actioned_by
+
+    subject = receiver.name+", Your Leave Got "+status
+    msg = Message(subject,
+                  recipients=[receiver.email])
+    msg.body = "" 
+    msg.html = render_template('emails/leave_action.html', sender=sender, receiver=receiver, status=status)       
+    mail.send(msg)
+    return True
+
+def send_request_mail(from_date,to_date,category,user):
+
+    sender = g.user
+    subject = "New leave request from "+sender.name
+    msg = Message(subject,
+                  recipients=[user.email])
+    msg.body = "" 
+    msg.html = render_template('emails/leave_request.html', sender=sender, user=user, from_date=from_date, to_date=to_date, category=category)       
+    mail.send(msg)
+    return True
+
+def send_holiday_announcement(name, from_date, to_date, reciever):
+    sender = g.user
+    if from_date == to_date:
+        duration = "on "+from_date.strftime('%d %b %Y')
+    else:
+        duration = "from "+from_date.strftime('%d %b')+" to "+to_date.strftime('%d %b %Y')
+    subject = name+" holiday announced"
+    msg = Message(subject,
+                recipients=[reciever.email])
+    msg.body = ""
+    msg.html = render_template("emails/holiday_announce.html", sender=sender, name=name, duration=duration)
+    mail.send(msg)
+    return True
+
+
+
+
+@app.errorhandler(404)
+def page_not_found(e):
+    # note that we set the 404 status explicitly
+    return render_template('404.html'), 404
+
+
+
+if __name__ == "__main__":
+    app.run(debug=True)

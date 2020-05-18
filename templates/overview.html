@@ -1,0 +1,185 @@
+{% extends "template.html" %}
+{% block title %}
+<title>Overview</title>
+{% endblock %}
+{% block heading %}
+<h2>Overview</h2>
+{% endblock %}
+{% block content %}
+<div class="container-fluid">
+<div class="row">
+  <div class="col-md-6">
+    <div class="row">
+    <div class="col-lg-6 col-md-6 col-sm-6">
+      <div class="card card-stats with-border">
+        <div class="card-header card-header-info card-header-icon">
+          <div class="card-icon">
+            <i class="material-icons">date_range</i>
+          </div>
+          <p class="card-category">Leaves Available</p>
+          <h3 class="card-title">{{g.user.annual_leaves}}
+            <small>Days</small>
+          </h3>
+        </div>
+        <div class="card-footer">
+          <div class="stats">
+            <i class="material-icons text-primary">visibility</i>
+            <a href="/leaves/">View Details</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6 col-md-6 col-sm-6">
+      <div class="card card-stats with-border">
+        <div class="card-header card-header-success card-header-icon">
+          <div class="card-icon">
+            <i class="material-icons">group</i>
+          </div>
+          <p class="card-category">Today's Strength</p>
+          <h3 class="card-title">75/79
+            <small>Staff</small>
+          </h3>
+        </div>
+        <div class="card-footer">
+          <div class="stats">
+            <i class="material-icons text-primary">visibility</i>
+            View Details
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-12">
+      <div class="card with-border card-chart">
+        <div class="card-header card-header-info">
+          <div id="simpleBarChart" class="ct-chart"></div>
+        </div>
+        <div class="card-body">
+          <h4 class="card-title ">Approved Leaves - Coming Days</h4>
+          <p class="card-category">Check before applying a leave</p>
+        </div>
+      </div>
+    </div>
+    </div>
+  </div>
+{% if summary[0] %}
+    <div class="col-md-6">
+      <div class="card with-border">
+        <div class="card-header card-header-icon card-header-warning">
+          <div class="card-icon">
+            <i class="material-icons">card_travel</i>
+          </div>
+          <h4 class="card-title ">People away - This week</h4>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table">
+              <thead class=" text-primary">
+                <tr><th>#</th><th>Staff</th><th>Category</th><th>Leave Till</th></tr>
+              </thead>
+              <tbody>
+              {% for leave in summary[0] %}
+                <tr><td><a href="/profile/{{leave['user_id']}}/"><img class="img nav-icon" src="/static/img/users/{{leave['user_dp']}}"></a></td><td><a href="/profile/{{leave['user_id']}}/">{{leave["user_name"]}}</a></td><td>{% if leave["leave_category"] == "1" %}Holiday{% else %}Sick{% endif %}</td><td>{{leave["leave_till"].strftime('%d %b')}}</td></tr>
+              {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+{% endif %}
+</div>
+<div class="row">
+{% if summary[1] %}
+  <div class="col-md-6">
+    <div class="card with-border">
+      <div class="card-header card-header-icon card-header-rose">
+        <div class="card-icon">
+          <i class="material-icons">cake</i>
+        </div>
+        <h4 class="card-title ">Birthdays - This week</h4>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table">
+            <thead class=" text-primary">
+              <tr><th>#</th><th>Staff</th><th>Birthday</th></tr>
+            </thead>
+            <tbody>
+              {% for bday in summary[1] %}
+              <tr><td><a href="/profile/{{bday['user_id']}}/"><img class="img nav-icon" src="/static/img/users/{{bday['user_dp']}}"></a></td><td><a href="/profile/{{bday['user_id']}}/">{{bday["user_name"]}}</a></td><td>{{bday['dob'].strftime('%d %b')}}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endif %}
+{% if summary[2] %}
+  <div class="col-md-6">
+    <div class="card with-border">
+      <div class="card-header card-header-icon card-header-info">
+        <div class="card-icon">
+          <i class="material-icons">beach_access</i>
+        </div>
+        <h4 class="card-title ">Holidays - This week</h4>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table">
+            <thead class=" text-primary">
+              <tr><th>Holiday</th><th>From</th><th>Till</th></tr>
+            </thead>
+            <tbody>
+              {% for holiday in summary[2] %}
+              <tr><td>{{holiday["name"]}}</td><td>{{holiday['from'].strftime('%d %b')}}</td><td>{{holiday['to'].strftime('%d %b')}}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endif %}
+</div>
+</div>
+
+
+
+{% endblock %}
+{% block footer %}
+<!-- Chartist JS -->
+<script src="{{ url_for('static', filename='js/plugins/chartist.min.js') }}"></script>
+
+<script type="text/javascript">
+   var dataSimpleBarChart = {
+                labels:{{ key|safe }},
+                series: [
+                    {{ val|safe }}
+                ]
+            };
+
+            var optionsSimpleBarChart = {
+                seriesBarDistance: 10,
+                height: '250px',
+                high: {{ high|safe }},
+                axisX: {
+                    showGrid: false
+                }
+            };
+
+            var responsiveOptionsSimpleBarChart = [
+                ['screen and (max-width: 640px)', {
+                    seriesBarDistance: 5,
+                    axisX: {
+                        labelInterpolationFnc: function(value) {
+                            return value[0];
+                        }
+                    }
+                }]
+            ];
+
+            new Chartist.Bar('#simpleBarChart', dataSimpleBarChart, optionsSimpleBarChart, responsiveOptionsSimpleBarChart);
+
+</script>
+{% endblock %}

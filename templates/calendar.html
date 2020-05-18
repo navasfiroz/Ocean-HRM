@@ -1,0 +1,94 @@
+{% extends "template.html" %}
+{% block title %}
+<link href="/static/css/fullcalendar.min.css" rel="stylesheet" />
+
+<title>Calendar</title>
+{% endblock %}
+{% block heading %}
+<h2>Calendar</h2>
+{% endblock %}
+{% block content %}
+<div class="container-fluid">
+  <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#add-holiday">
+  Add a Holiday
+  </button>
+  <br><br>
+  <div class="row">
+<div class="modal fade" id="add-holiday" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLabel">Add a holiday</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="card-body">
+          <form action="/calendar/" method="POST">
+            <br>
+            <div class="form-group bmd-form-group">
+              <label for="name">Holiday Title</label>
+              <input type="text" class="form-control" name="name" id="name" placeholder="eg: Christmas Day" required>
+            </div>
+            <br>
+            <div class="form-group bmd-form-group">
+              <label for="from">Start Date</label>
+              <input type="date" class="form-control" name="from" id="from" required>
+            </div>
+            <br>
+            <div class="form-group bmd-form-group">
+              <label for="end">End Date</label>
+              <input type="date" class="form-control" name="end" id="end" required>
+            </div>
+            <br>
+            <div class="form-group">
+              <label for="message">What is it about?</label>
+              <textarea class="form-control" id="message" name="message" rows="3" placeholder="eg: Our organization is celebrating Christmas on 25th December"></textarea>
+            </div>
+            <br>
+            <div class="form-check">
+              <label class="form-check-label">
+                <input class="form-check-input" type="checkbox" name="announce" id="announce">Announce to all staff by email?
+                  <span class="form-check-sign">
+                  <span class="check"></span>
+                  </span>
+              </label>
+            </div>
+            <br>
+            <button type="submit" class="btn btn-primary pull-right">Save</button>
+            <div class="clearfix"></div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+  </div>
+  <div id='calendar'></div>
+</div>
+{% endblock %}
+{% block footer %}
+<script src="/static/js/plugins/moment.min.js"></script>
+<script src="/static/js/plugins/fullcalendar4.js"></script>
+<script src="/static/js/plugins/fullcalendar.daygrid.js"></script>
+<script type="text/javascript">
+  document.addEventListener('DOMContentLoaded', function() {
+  var calendarEl = document.getElementById('calendar');
+
+  var calendar = new FullCalendar.Calendar(calendarEl, {
+    plugins: [ 'interaction', 'dayGrid', 'timeGrid' ],
+    defaultView: 'dayGridMonth',
+    header: {
+      left: 'prev,next today',
+      center: 'title',
+      right: 'dayGridMonth,timeGridWeek,timeGridDay'
+    },
+    events: {{events | safe}}
+  });
+
+  calendar.render();
+});
+</script>
+{% endblock %}

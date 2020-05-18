@@ -22,3 +22,84 @@ img.img.nav-icon {
     max-width: 35px;
     border-radius: 100%;
 }
+.card.with-border {
+    border: 1px solid #e0e0e0;
+}
+.card-icon img {
+    max-width: 75px;
+    border-radius: 100%;
+}
+img.org-profile {
+    max-width: 115px;
+    height: auto;
+}
+img.img.bio-card {
+    max-width: 90px;
+    float: left;
+    border-radius: 100%;
+    padding: 10px;
+}
+.lost-screen img {
+    margin: 0 auto;
+    display: block;
+    max-width: 90%;
+}
+
+.lost-screen p {
+    text-align: center;
+    margin: 25px 0px;
+}
+
+.lost-screen button {
+    margin: 0 auto;
+    display: block;
+}
+.card [class*="card-header-"] .ct-chart .ct-series-a .ct-bar {
+    stroke-width: 25px;
+}
+#calendar{
+    max-width: 1200px;
+    margin: 0 auto;
+    display: block;
+}
+.fc-event, .fc-event-dot {
+    background-color: #3f51b5 !important;
+    color: white !important;
+    border: 1px solid #33439a;
+    padding: 2px 9px !important;
+}
+a.fc-day-grid-event.week-holiday {
+    background: #ffbf00 !important;
+    border-color: #dea600 !important;
+    color: black !important;
+}
+
+#load-screen {
+    width: 0px;
+    height: 0px;
+    background-color: #000000bf;
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    z-index: 99999999;
+    background-image: url(/static/img/loading.gif);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 40px;
+}
+.active {
+    width: 100% !important;
+    height: 100% !important;
+}
+button.fc-prev-button:after {
+    content: "Prev";
+    color: #464646;
+    font-size: 14px;
+    font-family: "Roboto", "Helvetica", "Arial", sans-serif;
+}
+button.fc-next-button:after {
+    content: "Next";
+    color: #464646;
+    font-size: 14px;
+    font-family: "Roboto", "Helvetica", "Arial", sans-serif;
+}

@@ -1,0 +1,99 @@
+{% extends "template.html" %}
+{% block title %}
+<title>Manage Requests</title>
+{% endblock %}
+{% block heading %}
+<h2>Manage Requests</h2>
+{% endblock %}
+{% block content %}
+<div class="container-fluid">
+  <div class="col-md-12">
+    <div class="card with-border">
+      <div class="card-header card-header-icon card-header-info">
+        <div class="card-icon">
+          <i class="material-icons">timeline</i>
+        </div>
+        <h4 class="card-title">Coloured Line Chart
+          <small> - Rounded</small>
+        </h4>
+      </div>
+      <div class="card-body">
+        <div id="colouredRoundedLineChart" class="ct-chart"></div>
+      </div>
+    </div>
+  </div>
+<div class="row">
+<div class="col-md-6">
+{% for leave in leaves %}
+{% if not leave.action[0] %}
+<div class="card with-border">
+  <div class="card-body ">
+  {% if leave.category == '1'%}
+    <h6 class="card-category text-info">
+      <i class="material-icons">card_travel</i>
+        Holiday Leave Request
+  {% else %}
+    <h6 class="card-category text-danger">
+      <i class="material-icons">local_hospital</i>
+        Sick Leave Request
+  {% endif %}
+    </h6>
+    <h4 class="card-title">
+      To Grow Your Business Start Focusing on Your Employees
+    </h4>
+
+  </div>
+  <div class="card-footer ">
+    <div class="author">
+        <img src="/static/img/users/{{leave.requested_by.dp}}" class="avatar img-raised">
+        <span>{{leave.requested_by.name}}</span>
+    </div>
+    <div class="stats ml-auto">
+      <a href="/leaves/action/d/{{leave.id}}" class="btn btn-sm btn-danger">Decline</a>
+      <a href="/leaves/action/a/{{leave.id}}" class="btn btn-sm btn-success">Approve</a>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endfor %}
+</div>
+</div>
+</div>
+{% endblock %}
+
+{% block footer %}
+<!-- Chartist JS -->
+<script src="{{ url_for('static', filename='js/plugins/chartist.min.js') }}"></script>
+
+<script type="text/javascript">
+    dataColouredRoundedLineChart = {
+                labels: {{ key|safe }},
+                series: [
+                    {{ val|safe }}
+                ]
+            };
+
+            optionsColouredRoundedLineChart = {
+                lineSmooth: Chartist.Interpolation.cardinal({
+                    tension: 10
+                }),
+                axisY: {
+                    showGrid: true,
+                    offset: 20
+                },
+                axisX: {
+                    showGrid: false,
+                    offset: 50
+                },
+                high: {{ high|safe }},
+                showPoint: true,
+                height: '300px'
+            };
+
+
+            var colouredRoundedLineChart = new Chartist.Line('#colouredRoundedLineChart', dataColouredRoundedLineChart, optionsColouredRoundedLineChart);
+
+            md.startAnimationForLineChart(colouredRoundedLineChart);
+
+</script>
+{% endblock %}

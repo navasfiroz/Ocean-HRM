@@ -68,10 +68,10 @@
             <th>Action</th>
           </tr></thead>
           <tbody>
-            {% for leave in g.user.leaves%}
+            {% for leave in g.user.leaves|sort(attribute='id', reverse = True) %}
             <tr>
-              <td>{{leave.leave_from.strftime('%Y-%m-%d')}}</td>
-              <td>{{leave.leave_to.strftime('%Y-%m-%d')}}</td>
+              <td>{{leave.from_date.strftime('%Y-%m-%d')}}</td>
+              <td>{{leave.to_date.strftime('%Y-%m-%d')}}</td>
               <td></td>
               <td>{% if leave.category == "1" %}
                     Holiday
@@ -79,10 +79,26 @@
                     Sick
                   {% endif %}
               </td>
-              <td>{{leave.status}}</td>
-              <td><button type="button" rel="tooltip" class="btn btn-danger" data-original-title="" title="">
+              <td>
+              {% if leave.action[0] %}
+                {% if leave.action[0].status == 1 %}
+                  Approved
+                {% else %}
+                  Declined
+                {% endif %}
+              {% else %}
+                Pending
+              {% endif %}
+              </td>
+              <td>
+              {% if not leave.action[0] %}
+                <button type="button" rel="tooltip" class="btn btn-sm btn-danger" data-original-title="" title="">
                     <i class="material-icons">close</i> Cancel
-                  <div class="ripple-container"></div></button></td>
+                  <div class="ripple-container"></div></button>
+              {% else %}
+                N/A
+              {% endif %}
+              </td>
             </tr>
             {% endfor %}
           </tbody>

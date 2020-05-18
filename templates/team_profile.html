@@ -1,0 +1,97 @@
+{% extends "template.html" %}
+{% block title %}
+<title>Team Details</title>
+{% endblock %}
+{% block heading %}
+<h2>{{team.name}} | Team Details</h2>
+{% endblock %}
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+
+  {% if team.lead[0] %}
+    <div class="col-lg-4 col-md-6 col-sm-6">
+      <div class="card card-stats with-border">
+        <div class="card-header card-header-info card-header-icon">
+          <div class="card-icon">
+            <img class="img" src="/static/img/users/{{team.lead[0].manager.dp}}">
+          </div>
+          <p class="card-category">Team Lead</p>
+          <h3 class="card-title">
+            <small>{{team.lead[0].manager.name}}</small>
+          </h3>
+        </div>
+        <div class="card-footer">
+          <div class="stats">
+            <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#set-lead">Change Lead</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% else %}
+  <div>
+  <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#set-lead">Set a Team Lead</button>
+  </div>
+  {% endif %}
+  <div class="modal fade" id="set-lead" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-body">
+        <div class="card-body">
+          <form action="/teams/{{team.id}}/" method="POST">
+            <br>
+            <div class="form-group">
+              <label for="user">Choose the lead</label>
+              <select class="form-control selectpicker" data-style="btn btn-link" name="user" id="user">
+                <option>Choose</option>
+                {% for user in users%}
+                <option value="{{user.id}}">{{user.email}}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <br>
+            <button type="submit" class="btn btn-primary pull-right">Update</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+
+  <br/><br/><br/><br/>
+
+    <br/>
+          <div class="table-responsive">
+        <table class="table">
+          <thead class=" text-primary">
+            <tr><th>ID</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>DOJ</th>
+            <th>Team</th>
+            <th>Status</th>
+          </tr></thead>
+          <tbody>
+            {% for user in team.users %}
+            <tr>
+              <td>{{user.id}}</td>
+              <td><a href="/profile/{{user.id}}">{{user.name}}</a></td>
+              <td>{{user.email}}</td>
+              <td>{{user.doj}}</td>
+              <td>{{user.team.name}}</td>
+              <td>
+                {% if user.password %}
+                Active
+                {% else %}
+                Invited (Pending)
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+  </div>
+</div>
+{% endblock %}
