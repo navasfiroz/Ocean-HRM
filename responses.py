@@ -7,7 +7,8 @@ res_dict = {
 "s4" : ["success","Deleted Successfully"],
 "s5" : ["success","Leave Approved"],
 "s6" : ["success","Leave Rejected"],
-"e1" : ["danger","Email & Password doesn't match"]
+"e1" : ["danger","Email & Password doesn't match"],
+"e2" : ["danger","Something went wrong, please try again later"]
 }
 
 def response (code):

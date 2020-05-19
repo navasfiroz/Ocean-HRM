@@ -87,30 +87,25 @@
       <div class="table-responsive">
         <table class="table">
           <thead class=" text-primary">
-            <tr><th>
-              ID
-            </th>
-            <th>
-              Name
-            </th>
-            <th>
-              Email
-            </th>
-            <th>
-              DOJ
-            </th>
-            <th>
-              Team
-            </th>
-            <th>
-              Status
-            </th>
+            <tr><th>ID</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>DOJ</th>
+            <th>Team</th>
+            <th>Status</th>
+            {% if g.user.role == 3 %}
+            <th>Actions</th>
+            {% endif %}
           </tr></thead>
           <tbody>
             {% for user in users%}
             <tr>
               <td>
-                <img class="img nav-icon" src="/static/img/users/{{user.dp}}">
+                  {% if user.dp %}
+                  <img class="img nav-icon" src="/static/img/users/{{user.dp}}">
+                  {% else %}
+                  <img class="img nav-icon" src="/static/img/users/default.png">
+                  {% endif %}
               </td>
               <td>
                 <a href="/profile/{{user.id}}">{{user.name}}</a>
@@ -122,7 +117,11 @@
                 {{user.doj}}
               </td>
               <td>
-                {{user.team.name}}
+              {% if user.member_of[0] %}
+                {% for memeber in user.member_of %}
+                  {{memeber.team.name}},
+                {% endfor %}
+              {% endif %}
               </td>
               <td>
                 {% if user.password %}
@@ -131,6 +130,16 @@
                 Invited (Pending)
                 {% endif %}
               </td>
+              {% if g.user.role == 3 %}
+              <td>
+                  <a href="/edit-profile/{{user.id}}/"><button class="btn btn-info btn-fab btn-fab-mini btn-round" title="Edit">
+                  <i class="material-icons">edit</i>
+                  </button></a>
+                  <button class="btn btn-danger btn-fab btn-fab-mini btn-round delete-user-btn" data-id="{{user.id}}" data-name="{{user.name}}" data-toggle="modal" data-target="#delete_user" title="Delete">
+                  <i class="material-icons">delete</i>
+                  </button>
+              </td>
+              {% endif %}
             </tr>
             {% endfor %}
           </tbody>
@@ -139,4 +148,40 @@
     </div>
   </div>
 </div>
+{% if g.user.role==3 %}
+<div class="modal fade" id="delete_user" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form action="/delete-profile/" method="POST">
+                <p>Are you sure, Do you want to <b>DELETE</b> user profile <b><span class="name-here"></span></b>?</p>
+                <p>Confirm your password to proceed with deletion</p>
+                <br/>
+                <input type="number" name="user-id" id="user-id" hidden>
+                <div class="form-group bmd-form-group">
+                  <label for="password">Password</label>
+                  <input type="password" name="password" id="password" class="form-control">
+                </div>
+              <button type="submit" class="btn btn-primary btn-round">Login</button>
+          </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+{% block footer %}
+<script type="text/javascript">
+$(".delete-user-btn").click(function(){
+var id = $(this).data("id")
+var name = $(this).data("name")
+$(".name-here").text(name)
+$("#user-id").val(id);
+})
+</script>
 {% endblock %}

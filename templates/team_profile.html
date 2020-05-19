@@ -7,32 +7,19 @@
 {% endblock %}
 {% block content %}
 <div class="container-fluid">
-  <div class="row">
+<h3>Team Leads</h3><br>
+<a href="#" type="button" class="badge badge-primary" data-toggle="modal" data-target="#set-lead">Set a Team Lead</a>
+  {% if team.leads[0] %}
 
-  {% if team.lead[0] %}
-    <div class="col-lg-4 col-md-6 col-sm-6">
-      <div class="card card-stats with-border">
-        <div class="card-header card-header-info card-header-icon">
-          <div class="card-icon">
-            <img class="img" src="/static/img/users/{{team.lead[0].manager.dp}}">
-          </div>
-          <p class="card-category">Team Lead</p>
-          <h3 class="card-title">
-            <small>{{team.lead[0].manager.name}}</small>
-          </h3>
-        </div>
-        <div class="card-footer">
-          <div class="stats">
-            <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#set-lead">Change Lead</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  {% else %}
-  <div>
-  <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#set-lead">Set a Team Lead</button>
-  </div>
-  {% endif %}
+    {% for lead in team.leads %}
+      <a href="/profile/{{lead.manager.id}}" class="badge badge-default">{{lead.manager.name}}</a>
+    {% endfor %}
+
+ {% endif %}
+ <br>
+  <br>
+ 
+  <div class="row">
   <div class="modal fade" id="set-lead" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
   <div class="modal-dialog" role="document">
     <div class="modal-content">
@@ -69,19 +56,17 @@
             <th>Name</th>
             <th>Email</th>
             <th>DOJ</th>
-            <th>Team</th>
             <th>Status</th>
           </tr></thead>
           <tbody>
-            {% for user in team.users %}
+            {% for member in team.members %}
             <tr>
-              <td>{{user.id}}</td>
-              <td><a href="/profile/{{user.id}}">{{user.name}}</a></td>
-              <td>{{user.email}}</td>
-              <td>{{user.doj}}</td>
-              <td>{{user.team.name}}</td>
+              <td>{{member.members.id}}</td>
+              <td><a href="/profile/{{member.id}}">{{member.members.name}}</a></td>
+              <td>{{member.members.email}}</td>
+              <td>{{member.members.doj}}</td>
               <td>
-                {% if user.password %}
+                {% if member.members.password %}
                 Active
                 {% else %}
                 Invited (Pending)

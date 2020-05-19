@@ -78,7 +78,13 @@
               </thead>
               <tbody>
               {% for leave in summary[0] %}
-                <tr><td><a href="/profile/{{leave['user_id']}}/"><img class="img nav-icon" src="/static/img/users/{{leave['user_dp']}}"></a></td><td><a href="/profile/{{leave['user_id']}}/">{{leave["user_name"]}}</a></td><td>{% if leave["leave_category"] == "1" %}Holiday{% else %}Sick{% endif %}</td><td>{{leave["leave_till"].strftime('%d %b')}}</td></tr>
+                <tr><td><a href="/profile/{{leave['user_id']}}/">
+                {% if leave['user_dp'] %}
+                <img class="img nav-icon" src="/static/img/users/{{leave['user_dp']}}">
+                {% else %}
+                <img class="img nav-icon" src="/static/img/users/default.png">
+                {% endif %}
+                </a></td><td><a href="/profile/{{leave['user_id']}}/">{{leave["user_name"]}}</a></td><td>{% if leave["leave_category"] == "1" %}Holiday{% else %}Sick{% endif %}</td><td>{{leave["leave_till"].strftime('%d %b')}}</td></tr>
               {% endfor %}
               </tbody>
             </table>
@@ -106,7 +112,13 @@
             </thead>
             <tbody>
               {% for bday in summary[1] %}
-              <tr><td><a href="/profile/{{bday['user_id']}}/"><img class="img nav-icon" src="/static/img/users/{{bday['user_dp']}}"></a></td><td><a href="/profile/{{bday['user_id']}}/">{{bday["user_name"]}}</a></td><td>{{bday['dob'].strftime('%d %b')}}</td></tr>
+              <tr><td><a href="/profile/{{bday['user_id']}}/">
+              {% if bday['user_dp'] %}
+              <img class="img nav-icon" src="/static/img/users/{{bday['user_dp']}}">
+              {% else %}
+              <img class="img nav-icon" src="/static/img/users/default.png">
+              {% endif %}
+              </a></td><td><a href="/profile/{{bday['user_id']}}/">{{bday["user_name"]}}</a></td><td>{{bday['dob'].strftime('%d %b')}}</td></tr>
               {% endfor %}
             </tbody>
           </table>

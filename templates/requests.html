@@ -23,12 +23,12 @@
     </div>
   </div>
 <div class="row">
-<div class="col-md-6">
 {% for leave in leaves %}
 {% if not leave.action[0] %}
+<div class="col-md-4">
 <div class="card with-border">
   <div class="card-body ">
-  {% if leave.category == '1'%}
+  {% if leave.category == 1%}
     <h6 class="card-category text-info">
       <i class="material-icons">card_travel</i>
         Holiday Leave Request
@@ -39,24 +39,29 @@
   {% endif %}
     </h6>
     <h4 class="card-title">
-      To Grow Your Business Start Focusing on Your Employees
+      <span class="small-text">from <b>{{leave.from_date.strftime('%d %b %Y')}}</b> to <b>{{leave.to_date.strftime('%d %b %Y')}}</b></span> <br> {{leave.message}}
     </h4>
 
   </div>
   <div class="card-footer ">
-    <div class="author">
+    <div class="author"><a href="/profile/{{leave.requested_by.id}}/">
+      {% if leave.requested_by.dp %}
         <img src="/static/img/users/{{leave.requested_by.dp}}" class="avatar img-raised">
+      {% else %}
+        <img src="/static/img/users/default.png" class="avatar img-raised">
+      {% endif %}
         <span>{{leave.requested_by.name}}</span>
-    </div>
+    </a></div>
     <div class="stats ml-auto">
       <a href="/leaves/action/d/{{leave.id}}" class="btn btn-sm btn-danger">Decline</a>
       <a href="/leaves/action/a/{{leave.id}}" class="btn btn-sm btn-success">Approve</a>
     </div>
   </div>
 </div>
+</div>
 {% endif %}
 {% endfor %}
-</div>
+
 </div>
 </div>
 {% endblock %}

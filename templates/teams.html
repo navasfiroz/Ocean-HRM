@@ -6,26 +6,52 @@
 <h2>Different teams</h2>
 {% endblock %}
 {% block content %}
-<div class="container-fluid">
-  <div class="row">
-    <div class="col-md-8">
-      <div class="card">
+<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#add-team">
+  Create a team
+</button>
+<div class="modal fade" id="add-team" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLabel">Create a new team</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
         <div class="card-body">
           <form action="/teams/" method="POST">
-            <div class="row">
-              <div class="col-md-12">
-                <div class="form-group bmd-form-group">
-                  <label class="bmd-label-floating">Team Name</label>
-                  <input type="text" name="team-name" id="team-name" class="form-control">
-                </div>
-              </div>
-              <button type="submit" class="btn btn-primary pull-right">Create</button>
-              <div class="clearfix"></div>
+            <div class="form-group bmd-form-group">
+              <label for="name">Team Name</label>
+              <input type="text" name="name" id="name" class="form-control" placeholder="Eg: Finance">
             </div>
+            <br>
+            <div class="form-group bmd-form-group">
+              <label for="description">Team Description</label>
+              <textarea class="form-control" id="description" name="description" rows="3" placeholder="Eg: Group for finance professionals"></textarea>
+            </div>
+            <br>
+            <div class="form-group bmd-form-group">
+              <label for="lead">Team Lead</label>
+              <select class="form-control selectpicker" data-style="btn btn-link" name="lead" id="lead">
+                <option value="{{g.user.id}}">{{g.user.email}}</option>
+              {% for user in users %}
+                <option value="{{user.id}}">{{user.email}}</option>
+              {% endfor %}
+              </select>
+            </div>
+            <br/>
+            <button type="submit" class="btn btn-primary pull-right">Create Team</button>
           </form>
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+
+<div class="container-fluid">
+  <div class="row">
     <div class="col-md-12">
       <div class="card">
         <div class="card-body">
@@ -35,18 +61,26 @@
                 <tr><th>ID</th>
                 <th>Name</th>
                 <th>No of memebers</th>
-                <th>Team Lead</th>
+                <th>Team Lead(s)</th>
+                <th>Actions</th>
               </tr></thead>
               <tbody>
               {% for team in teams%}
                 <tr>
                   <td>{{team.id}}</td>
                   <td><a href="{{team.id}}">{{team.name}}</a></td>
-                  <td>{{team.users|length}}</td>
+                  <td>{{team.members|length}}</td>
                   <td>
-                  {% if team.lead[0] %}
-                    {{team.lead[0].manager.name}}
+                  {% if team.leads[0] %}
+                    {% for lead in team.leads %}
+                      {{lead.manager.name}}&nbsp;&nbsp;&nbsp; 
+                    {% endfor %}
                   {% endif %}
+                  </td>
+                  <td>
+                    <button class="btn btn-danger btn-fab btn-fab-mini btn-round delete-team-btn" data-id="{{team.id}}" data-name="{{team.name}}" data-toggle="modal" data-target="#delete_team" title="Delete">
+                  <i class="material-icons">delete</i>
+                  </button>
                   </td>
                 </tr>
               {% endfor %}
@@ -58,4 +92,40 @@
     </div>
   </div>
 </div>
+{% if g.user.role==3 %}
+<div class="modal fade" id="delete_team" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form action="/delete-team/" method="POST">
+                <p>Are you sure, Do you want to <b>DELETE</b> team <b><span class="name-here"></span></b>?</p>
+                <p>Confirm your password to proceed with deletion</p>
+                <br/>
+                <input type="number" name="team-id" id="team-id" hidden>
+                <div class="form-group bmd-form-group">
+                  <label for="password">Password</label>
+                  <input type="password" name="password" id="password" class="form-control">
+                </div>
+              <button type="submit" class="btn btn-primary btn-round">Login</button>
+          </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+{% block footer %}
+<script type="text/javascript">
+$(".delete-team-btn").click(function(){
+var id = $(this).data("id")
+var name = $(this).data("name")
+$(".name-here").text(name)
+$("#team-id").val(id);
+})
+</script>
 {% endblock %}

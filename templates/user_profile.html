@@ -13,7 +13,11 @@
 			<div class="card card-profile">
 				<div class="card-avatar">
 					<a href="javascript:;">
+                    {% if user.dp %}
 						<img class="img" src="/static/img/users/{{user.dp}}">
+                    {% else %}
+                        <img class="img" src="/static/img/users/default.png">
+                    {% endif %}
 					</a>
 				</div>
 				<div class="card-body">
@@ -30,17 +34,44 @@
             <table class="table">
               <tbody>
                 <tr><td>Email :</td><td>{{user.email}}</td></tr>
-                <tr><td>Phone :</td><td>{{user.phone}}</td></tr>
-                <tr><td>Team :</td><td>{{user.team.name}}</td></tr>
-                <tr><td>DOB :</td><td>{{user.dob}}</td></tr>
-                <tr><td>DOJ :</td><td>{{user.doj}}</td></tr>
+                <tr><td>Team :</td><td>
+                {% if user.member_of[0]%}
+                	{% for memeber in user.member_of%}
+               		 {{memeber.team.name}},
+                	{% endfor %}
+                {% endif %}
+            	</td></tr>
+                <tr><td>Date of Birth :</td><td>{{user.dob}}</td></tr>
+                <tr><td>Date of Join :</td><td>{{user.doj}}</td></tr>
                 <tr><td>Blood Group :</td><td>{{user.blood_group}}</td></tr>
-                <tr><td>Pay :</td><td>{{user.pay}}</td></tr>
-                <tr><td>Address :</td><td>{{user.address}}</td></tr>
                 <tr><td>Nationality :</td><td>{{user.origin_country}}</td></tr>
-                <tr><td>Marital Status :</td><td>{{user.marital_status}}</td></tr>
-                <tr><td>Diet Type :</td><td>{{user.diet_type}}</td></tr>
+                <tr><td>Marital Status :</td><td>
+                {% if user.marital_status == 1 %}
+                    Single
+                {% elif user.marital_status == 2 %}
+                    Married
+                {% else %}
+                    Not Set
+                {% endif %}
+                </td></tr>
+                <!-- Protected info for admin or selfview -->
+            {% if g.user.role ==3 or g.user.id == user.id %}
+                <tr><td>Phone :</td><td>{{user.phone}}</td></tr>
+                <tr><td>Pay :</td><td>{{user.pay}}</td></tr>
+                <tr><td>Diet Type :</td><td>
+                {% if user.diet_type == 1 %}
+                    Non-vegan
+                {% elif user.diet_type == 2 %}
+                    Eggetarian
+                {% elif user.diet_type == 3 %}
+                    Vegan
+                {% else %}
+                    Not Set
+                {% endif %}
+                </td></tr>
                 <tr><td>Drinking Preference :</td><td>{{user.drinking}}</td></tr>
+                <tr><td>Address :</td><td>{{user.address}}</td></tr>
+            {% endif %}
               </tbody>
             </table>
             <a href="/edit-profile/"><button type="submit" class="btn btn-primary pull-center">Edit Profile</button></a>
