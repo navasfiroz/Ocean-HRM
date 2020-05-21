@@ -9,6 +9,7 @@
 {% endblock %}
 {% block content %}
 <div class="container-fluid">
+{% if g.user.role==3 %}
   <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#add-holiday">
   Add a Holiday
   </button>
@@ -64,8 +65,8 @@
     </div>
   </div>
 </div>
-
-  </div>
+</div>
+{% endif %}
   <div id='calendar'></div>
 </div>
 {% endblock %}
@@ -90,5 +91,8 @@
 
   calendar.render();
 });
+</script>
+<script type="text/javascript">
+  $(".mn-calendar").addClass("active")
 </script>
 {% endblock %}

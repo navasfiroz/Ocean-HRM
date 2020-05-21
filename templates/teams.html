@@ -3,9 +3,10 @@
 <title>Teams</title>
 {% endblock %}
 {% block heading %}
-<h2>Different teams</h2>
+<h2>Teams</h2>
 {% endblock %}
 {% block content %}
+{% if g.user.role == 3%}
 <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#add-team">
   Create a team
 </button>
@@ -23,7 +24,7 @@
           <form action="/teams/" method="POST">
             <div class="form-group bmd-form-group">
               <label for="name">Team Name</label>
-              <input type="text" name="name" id="name" class="form-control" placeholder="Eg: Finance">
+              <input type="text" name="name" id="name" class="form-control" placeholder="Eg: Finance" required>
             </div>
             <br>
             <div class="form-group bmd-form-group">
@@ -33,7 +34,7 @@
             <br>
             <div class="form-group bmd-form-group">
               <label for="lead">Team Lead</label>
-              <select class="form-control selectpicker" data-style="btn btn-link" name="lead" id="lead">
+              <select class="form-control selectpicker" data-style="btn btn-link" name="lead" id="lead" required>
                 <option value="{{g.user.id}}">{{g.user.email}}</option>
               {% for user in users %}
                 <option value="{{user.id}}">{{user.email}}</option>
@@ -48,7 +49,7 @@
     </div>
   </div>
 </div>
-
+{% endif %}
 
 <div class="container-fluid">
   <div class="row">
@@ -127,5 +128,8 @@ var name = $(this).data("name")
 $(".name-here").text(name)
 $("#team-id").val(id);
 })
+</script>
+<script type="text/javascript">
+  $(".mn-teams").addClass("active")
 </script>
 {% endblock %}

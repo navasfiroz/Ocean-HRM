@@ -34,7 +34,7 @@
             <br>
             <div class="form-group bmd-form-group">
               <label for="category">Type</label>
-              <select class="form-control selectpicker" data-style="btn btn-link" name="category" id="category">
+              <select class="form-control selectpicker" data-style="btn btn-link" name="category" id="category" required>
                 <option value="1">Holiday</option>
                 <option value="2">Sick</option>
               </select>
@@ -42,7 +42,7 @@
             <br/>
             <div class="form-group">
               <label for="message">Explain a bit</label>
-              <textarea class="form-control" id="message" name="message" rows="3"></textarea>
+              <textarea class="form-control" id="message" name="message" rows="3" required></textarea>
             </div>
           <button type="submit" class="btn btn-primary pull-right">Send Request</button>
           <div class="clearfix"></div>
@@ -54,7 +54,7 @@
 </div>
 <div class="col-md-12">
   <div class="card">
-    <h3>All Members</h3>
+    <h3>Your Leave Requests</h3>
     <div class="card-body">
       <div class="table-responsive">
         <table class="table">
@@ -73,7 +73,7 @@
               <td>{{leave.from_date.strftime('%Y-%m-%d')}}</td>
               <td>{{leave.to_date.strftime('%Y-%m-%d')}}</td>
               <td></td>
-              <td>{% if leave.category == "1" %}
+              <td>{% if leave.category == 1 %}
                     Holiday
                   {% else %}
                     Sick
@@ -83,8 +83,10 @@
               {% if leave.action[0] %}
                 {% if leave.action[0].status == 1 %}
                   Approved
-                {% else %}
+                {% elif leave.action[0].status == 2 %}
                   Declined
+                {% else %}
+                  Cancelled
                 {% endif %}
               {% else %}
                 Pending
@@ -92,9 +94,9 @@
               </td>
               <td>
               {% if not leave.action[0] %}
-                <button type="button" rel="tooltip" class="btn btn-sm btn-danger" data-original-title="" title="">
+                <a href="/leaves/action/c/{{leave.id}}"><button type="button" rel="tooltip" class="btn btn-sm btn-danger" data-original-title="" title="">
                     <i class="material-icons">close</i> Cancel
-                  <div class="ripple-container"></div></button>
+                  <div class="ripple-container"></div></button></a>
               {% else %}
                 N/A
               {% endif %}
@@ -107,4 +109,9 @@
     </div>
   </div>
 </div>
+{% endblock %}
+{% block footer %}
+<script type="text/javascript">
+  $(".mn-leaves").addClass("active")
+</script>
 {% endblock %}

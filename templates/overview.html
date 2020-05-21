@@ -33,11 +33,11 @@
       <div class="card card-stats with-border">
         <div class="card-header card-header-success card-header-icon">
           <div class="card-icon">
-            <i class="material-icons">group</i>
+            <i class="material-icons">hourglass_full</i>
           </div>
-          <p class="card-category">Today's Strength</p>
-          <h3 class="card-title">75/79
-            <small>Staff</small>
+          <p class="card-category">You are here</p>
+          <h3 class="card-title">{{days}}
+            <small>Days</small>
           </h3>
         </div>
         <div class="card-footer">
@@ -193,5 +193,8 @@
 
             new Chartist.Bar('#simpleBarChart', dataSimpleBarChart, optionsSimpleBarChart, responsiveOptionsSimpleBarChart);
 
+</script>
+<script type="text/javascript">
+  $(".mn-overview").addClass("active")
 </script>
 {% endblock %}

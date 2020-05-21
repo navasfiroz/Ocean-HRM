@@ -74,10 +74,17 @@
             {% endif %}
               </tbody>
             </table>
-            <a href="/edit-profile/"><button type="submit" class="btn btn-primary pull-center">Edit Profile</button></a>
+            {% if g.user.role ==3 or g.user.id == user.id %}
+            <a href="/edit-profile/{{user.id}}/"><button type="submit" class="btn btn-primary pull-center">Edit Profile</button></a>
+            {% endif %}
           </div>
 
 		</div>
 	</div>
 </div>
+{% endblock %}
+{% block footer %}
+<script type="text/javascript">
+  $(".mn-employees").addClass("active")
+</script>
 {% endblock %}

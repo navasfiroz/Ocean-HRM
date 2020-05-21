@@ -37,10 +37,9 @@ def before_request():
         if login_user and bcrypt.check_password_hash(session["sk"], login_user.name):
             g.user = login_user
 
-# Bcrypt syntax for generating and checking hash
-# passw = bcrypt.generate_password_hash("kl2h4448").decode("utf-8")
-# print(bcrypt.check_password_hash(passw,"kl2h4448"))
-
+"""
+Starting of user models
+"""
 class Organization(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(150), nullable=False)
@@ -49,10 +48,7 @@ class Organization(db.Model):
     currency = db.Column(db.String)
     week_start = db.Column(db.Integer)
     week_off = db.Column(db.String)
-    
 
-#Need to check the email ID uniqueness, now skipping that part
-#User role need backend validation as well
 class Team(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False)
@@ -93,8 +89,6 @@ class Activity_log(db.Model):
     time = db.Column(db.DateTime)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     description = db.Column(db.String, nullable=False)
-    #Category -> 1=Leaves, 2=Requests, 3=Creations, 4=Deletes
-    category = db.Column(db.Integer)
 
 class Access_token(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -142,77 +136,115 @@ class User(db.Model):
     logs = db.relationship("Activity_log",backref="activity_by")
     token = db.relationship("Access_token", cascade="all,delete", backref="user")
 
-#Set session browser cookie with 3 layer security
-def set_session_cookie(user):
-    session["uid"] = user.id
-    session["sk"] = bcrypt.generate_password_hash(user.name).decode("utf-8")
-
-def clear_session_cookie():
-    session.pop("uid", None)
-    session.pop("sk", None)
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
 db.create_all()
-# finance = Team(name="Finance")
-# db.session.add(finance)
-# db.session.commit()
-# navas = User(name="Navas",email="navasfiroz@gmail.com",team_id=1)
-# db.session.add(navas)
-# db.session.commit()
 
-# for user in User.query.all():
-#     print(user.team.name)
 
+"""
+Starting Routes here
+"""
 @app.route('/')
 def overview():
-    summary = this_week_summary()
-    dicto = stats(date.today(), 10)
-    high = max(dicto.values())+3
-    return render_template("overview.html", summary=summary, key=json.dumps(list(dicto.keys())), val=json.dumps(list(dicto.values())),high=json.dumps(high))
+    if g.user:
+        summary = this_week_summary()
+        dicto = get_approved_leaves(date.today(), 10)
+        high = max(dicto.values())+3
+        if g.user:
+            days = (date.today() - g.user.doj)
+            days = days.days+1
+        else:
+            days = 0
+        return render_template("overview.html", days=days, summary=summary, key=json.dumps(list(dicto.keys())), val=json.dumps(list(dicto.values())),high=json.dumps(high))
+    else:
+        return render_template("login.html")
 
 @app.route('/calendar/', methods=["GET","POST"])
 def calendar():
-    events = calender_events()
-    if request.method == "GET":
-        return render_template("calendar.html", events=json.dumps(events))
+    if g.user:
+        events = calender_events()
+        if request.method == "GET":
+            return render_template("calendar.html", events=json.dumps(events))
+        else:
+            name = request.form['name']
+            start = datetime.strptime(request.form['from'],'%Y-%m-%d').date()
+            end = datetime.strptime(request.form['end'],'%Y-%m-%d').date()
+            message =request.form['message']
+            announce =request.form.get('announce')
+            holiday = Holiday(name=name,start_date=start,end_date=end,description=message)
+            db.session.add(holiday)
+            db.session.commit()
+            if announce:
+                users = User.query.filter(User.password.isnot(None)).all()
+                for user in users:
+                    send_holiday_announcement(name, start, end, user)
+            update_log(g.user.id,name+" holiday created")
+            return render_template("calendar.html", events=json.dumps(events),response=response("s2"))
     else:
-        name = request.form['name']
-        start = datetime.strptime(request.form['from'],'%Y-%m-%d').date()
-        end = datetime.strptime(request.form['end'],'%Y-%m-%d').date()
-        message =request.form['message']
-        announce =request.form.get('announce')
-        holiday = Holiday(name=name,start_date=start,end_date=end,description=message)
-        db.session.add(holiday)
-        db.session.commit()
-        if announce:
-            users = User.query.filter(User.password.isnot(None)).all()
-            for user in users:
-                send_holiday_announcement(name, start, end, user)
-        return render_template("calendar.html", events=json.dumps(events),response=response("s2"))
+        return render_template("login.html")
 
 
 @app.route('/sign-in/', methods=["GET","POST"])
-def sign_in():
+def sign_in(**kwargs):
     if request.method == "POST":
         req = request.form
         email = request.form['email']
         password = req['password']
+        next_url = req['next-url']
 
         user = User.query.filter_by(email=email).first()
         if user and bcrypt.check_password_hash(user.password, password):
             set_session_cookie(user)
+            if next_url:
+                return redirect(next_url)
             return redirect(url_for("overview"))
         else:
             return render_template("login.html",response=response("e1"))
     else:
+        url_req = kwargs.get('nextURL',None)
+        if url_req:
+            return render_template("login.html", nextURL=url_req)
         return render_template("login.html")
 
 @app.route('/sign-out/')
 def sign_out():
     clear_session_cookie()
     return redirect(url_for("sign_in"))
+
+@app.route('/update-password/', methods=["GET","POST"])
+def update_password():
+    if g.user:
+        if request.method == "GET":
+            return render_template("password-update.html")
+        else:
+            password = request.form['c-password']
+            new_password = request.form['password']
+            if new_password != "" and bcrypt.check_password_hash(g.user.password, password):
+                user = User.query.get(g.user.id)
+                user.password = bcrypt.generate_password_hash(new_password).decode("utf-8")
+                db.session.commit()
+                update_log(g.user.id,"Password changed")
+                clear_session_cookie()
+                return render_template("login.html",response=response("s3"))
+            else:
+                return render_template("password-update.html",response=response("e2"))
+    else:
+        return render_template("login.html")
+
+@app.route('/forgot-password/', methods=["GET","POST"])
+def forgot_password():
+    if request.method == "GET":
+        return render_template("forgot_password.html")
+    else:
+        email = request.form['email']
+        user = User.query.filter_by(email=email).first()
+        if user:
+            token = create_token(email)
+            link = "http://127.0.0.1:5000/reset/"+str(user.id)+"/"+token+"/"
+            subject = user.name+", reset your password"
+            send_reset_mail(subject,user,link)
+            update_log(user.id,"Requested for password reset")
+            return render_template("forgot_password.html", response=response("s7"))
+        else:
+            return render_template("forgot_password.html", response=response("e4"))
 
 @app.route('/start/',methods=["GET","POST"])
 def start():
@@ -238,52 +270,52 @@ def start():
         db.session.add(leads)
         db.session.commit()
 
-        set_session_cookie(user)
 
         org = Organization(name=org_name,currency=org_currency,leave_calender=org_leave_policy)
         db.session.add(org)
         db.session.commit()
-
-        return redirect("/teams/")
+        update_log(user.id,org_name+" created")
+        return redirect(url_for("sign_in",nextURL="/company/settings/"))
 
     else:
         return render_template("org_register.html")
 
 @app.route('/employees/', methods=["GET","POST"])
 def employees():
-    all_team= Team.query.all()
-    all_users = User.query.all()
-    if request.method == "GET":
-        return render_template("employees.html", teams=all_team, users=all_users)
+    if g.user:
+        all_team= Team.query.all()
+        all_users = User.query.all()
+        if request.method == "GET":
+            return render_template("employees.html", teams=all_team, users=all_users)
+        else:
+            email = request.form['email']
+            if is_email_unique(email):
+                name = request.form['name']
+                team = request.form['team']
+                title = request.form['title']
+                role = request.form['role']
+                leaves = request.form['leaves']
+                doj = datetime.strptime(request.form['doj'],'%Y-%m-%d').date()
+                pay = request.form['pay']
+                new_user = User(name=name,email=email,role=role,annual_leaves=leaves,doj=doj,pay=pay,title=title)
+                db.session.add(new_user)
+                db.session.commit()
+
+                user = User.query.filter_by(email=email).first()
+                member = Team_members(user_id=user.id,team_id=team)
+                db.session.add(member)
+                db.session.commit()
+
+                token = create_token(email)
+                link = "http://127.0.0.1:5000/reset/"+str(user.id)+"/"+token+"/"
+                subject = user.name+", your invitation to Hexa HRM"
+                send_activation_mail(subject,g.user,user,link)
+                update_log(g.user.id,email+" profile created")
+                return render_template("employees.html", teams=all_team, users=all_users, response=response("s2"))
+            else:
+                return render_template("employees.html", teams=all_team, users=all_users, response=response("e3"))
     else:
-        name = request.form['name']
-        email = request.form['email']
-        team = request.form['team']
-        title = request.form['title']
-        role = request.form['role']
-        leaves = request.form['leaves']
-        doj = datetime.strptime(request.form['doj'],'%Y-%m-%d').date()
-        pay = request.form['pay']
-        new_user = User(name=name,email=email,role=role,annual_leaves=leaves,doj=doj,pay=pay,title=title)
-        db.session.add(new_user)
-        db.session.commit()
-
-        user = User.query.filter_by(email=email).first()
-        member = Team_members(user_id=user.id,team_id=team)
-        db.session.add(member)
-        db.session.commit()
-
-        #Create an access token
-        token = secrets.token_urlsafe(20)
-        created_date = date.today()
-        access_token = Access_token(key=token,user_id=user.id,created_date=created_date)
-        db.session.add(access_token)
-        db.session.commit()
-
-        link = "http://127.0.0.1:5000/reset/"+str(user.id)+"/"+token+"/"
-        subject = user.name+", your invitation to Hexa HRM"
-        send_activation_mail(subject,g.user,user,link)
-        return render_template("employees.html", teams=all_team, users=all_users, response=response("s2"))
+        return render_template("login.html")
 
 @app.route('/reset/<user_id>/<token>/', methods=["GET","POST"])
 def check_token(user_id,token):
@@ -302,7 +334,8 @@ def check_token(user_id,token):
                     db.session.commit()
                 else:
                     return redirect(url_for("check_token",user_id=user_id,token=token))
-                return redirect(url_for("sign_in"))
+                update_log(user.id,user.email+" profile activated")
+                return redirect(url_for("sign_in",nextURL="/edit-profile/"+str(user.id)+"/"))
         else:
             return render_template("lost.html")
     else:
@@ -310,40 +343,49 @@ def check_token(user_id,token):
 
 @app.route('/teams/', methods=["GET","POST"])
 def teams():
-    all_team= Team.query.all()
-    users = User.query.all()
-    if request.method == "GET":
-        return render_template("teams.html", teams=all_team, users=users)
+    if g.user:
+        all_team= Team.query.all()
+        users = User.query.all()
+        if request.method == "GET":
+            return render_template("teams.html", teams=all_team, users=users)
+        else:
+            name = request.form['name']
+            description = request.form['description']
+            lead = request.form['lead']
+            db.session.add(Team(name=name, description=description))
+            db.session.commit()
+            team_id = Team.query.filter_by(name=name).first().id
+            team_lead = Team_leads(user_id=lead,team_id=team_id)
+            team_member = Team_members(user_id=lead,team_id=team_id)
+            db.session.add(team_lead)
+            db.session.add(team_member)
+            db.session.commit()
+            update_log(g.user.id,name+" team created")
+            return render_template("teams.html", teams=all_team, response=response("s2"))
     else:
-        name = request.form['name']
-        description = request.form['description']
-        lead = request.form['lead']
-        db.session.add(Team(name=name, description=description))
-        db.session.commit()
-        team_id = Team.query.filter_by(name=name).first().id
-        team_lead = Team_leads(user_id=lead,team_id=team_id)
-        team_member = Team_members(user_id=lead,team_id=team_id)
-        db.session.add(team_lead)
-        db.session.add(team_member)
-        db.session.commit()
-        return render_template("teams.html", teams=all_team, response=response("s2"))
+        return render_template("login.html")
 
 @app.route('/teams/<team_id>/', methods=["GET","POST"])
 def team_profile(team_id):
-    if request.method == "GET":
-        team = Team.query.get(team_id)
-        users = User.query.all()
-        if team:
-            return render_template("team_profile.html", team=team, users=users)
+    if g.user:
+        if request.method == "GET":
+            team = Team.query.get(team_id)
+            users = User.query.all()
+            if team:
+                return render_template("team_profile.html", team=team, users=users)
+            else:
+                return redirect(url_for("teams"))
         else:
-            return redirect(url_for("teams"))
+            user_id = request.form["user"]
+            if user_id:
+                team_lead = Team_leads(user_id=user_id,team_id=team_id)
+                db.session.add(team_lead)
+                db.session.commit()
+                update_log(g.user.id,user_id+" assigned as lead to group id "+team_id)
+            return redirect(url_for("team_profile",team_id=team_id))
     else:
-        user_id = request.form["user"]
-        if user_id:
-            team_lead = Team_leads(user_id=user_id,team_id=team_id)
-            db.session.add(team_lead)
-            db.session.commit()
-        return redirect(url_for("team_profile",team_id=team_id))
+        return render_template("login.html")
+
 
 @app.route('/delete-team/', methods=["POST"])
 def delete_team():
@@ -354,6 +396,7 @@ def delete_team():
             team = Team.query.get(team_id)
             db.session.delete(team)
             db.session.commit()
+            update_log(g.user.id,"Deleted team id "+team_id)
             all_team= Team.query.all()
             all_users = User.query.all()
             return render_template("teams.html", teams=all_team, users=all_users, response=response("s4"))
@@ -364,11 +407,14 @@ def delete_team():
 
 @app.route('/profile/<user_id>/')
 def profile(user_id):
-    user = User.query.get(user_id)
-    if user:
-        return render_template("user_profile.html", user=user)
+    if g.user:
+        user = User.query.get(user_id)
+        if user:
+            return render_template("user_profile.html", user=user)
+        else:
+            return redirect(url_for("employees"))
     else:
-        return redirect(url_for("employees"))
+        return render_template("login.html")
 
 @app.route('/edit-profile/<user_id>/', methods=["GET","POST"])
 def edit_profile(user_id):
@@ -411,7 +457,7 @@ def edit_profile(user_id):
                 user.pay = request.form["pay"]
                 user.annual_leaves = request.form["leave"]
             db.session.commit()
-
+            update_log(g.user.id,"Updated user pfrofile "+str(user.id))
             return render_template("edit_profile.html", user=user, response=response("s3"))
         else:
             return render_template("edit_profile.html", user=user)
@@ -427,6 +473,7 @@ def delete_user():
             user = User.query.get(user_id)
             db.session.delete(user)
             db.session.commit()
+            update_log(g.user.id,"Deleted user pfrofile "+str(user.id))
             all_team= Team.query.all()
             all_users = User.query.all()
             return render_template("employees.html", teams=all_team, users=all_users, response=response("s4"))
@@ -436,113 +483,184 @@ def delete_user():
 
 @app.route('/leaves/', methods=["GET","POST"])
 def leaves():
-    if request.method == "POST":
-        from_date = datetime.strptime(request.form['from'],'%Y-%m-%d').date()
-        to_date = datetime.strptime(request.form['to'],'%Y-%m-%d').date()
-        category = request.form['category']
-        message = request.form['message']
-        created_date = date.today()
+    if g.user:
+        if request.method == "POST":
+            from_date = datetime.strptime(request.form['from'],'%Y-%m-%d').date()
+            to_date = datetime.strptime(request.form['to'],'%Y-%m-%d').date()
+            category = request.form['category']
+            message = request.form['message']
+            created_date = date.today()
 
-        leave_req = Leave(user_id=g.user.id,category=category,created_date=created_date,from_date=from_date,to_date=to_date,message=message)
-        db.session.add(leave_req)
-        db.session.commit()
+            leave_req = Leave(user_id=g.user.id,category=category,created_date=created_date,from_date=from_date,to_date=to_date,message=message)
+            db.session.add(leave_req)
+            db.session.commit()
 
-        length = count_leaves(from_date,to_date)
-        user = User.query.get(g.user.id)
-        user.annual_leaves = user.annual_leaves - length
-        db.session.commit()
+            length = count_leaves(from_date,to_date)
+            user = User.query.get(g.user.id)
+            user.annual_leaves = user.annual_leaves - length
+            db.session.commit()
 
-        #Get all team leads that session user member of
-        team_leads = get_team_leads(user.id)
+            #Get all team leads that session user member of
+            team_leads = get_team_leads(user.id)
 
-        #Send email notification all admins and team leads
-        admins = User.query.filter_by(role=3).all()
-        for user in admins:
-            send_request_mail(from_date,to_date,category,user)
-        for lead in team_leads:
-            if not lead in admins:
-                send_request_mail(from_date,to_date,category,lead)
+            #Send email notification all admins and team leads
+            admins = User.query.filter_by(role=3).all()
+            for user in admins:
+                send_request_mail(from_date,to_date,category,user)
+            for lead in team_leads:
+                if not lead in admins:
+                    send_request_mail(from_date,to_date,category,lead)
+            update_log(g.user.id,"Requested new leave")
+            return render_template("leaves.html", response=response("s1"))
 
-        return render_template("leaves.html", response=response("s1"))
-
+        else:
+            return render_template("leaves.html")
     else:
-        return render_template("leaves.html")
-
-
-# @app.route('/test/')
-# def test():
-
-
+        return render_template("login.html")
 
 @app.route('/leaves/action/<action>/<id>')
 def leave_action(action,id):
     leave = Leave.query.get(id)
     team_leads = get_team_leads(leave.requested_by.id)
     if g.user.role == 3 or g.user in team_leads:
-        if action == "d":
+        if action == "d" and not leave.action:
             action = Leave_action(leave_id=leave.id,user_id=g.user.id,status=2)
             length = count_leaves(leave.from_date,leave.to_date)
             user = leave.requested_by
             user.annual_leaves = user.annual_leaves + length
-        elif action == "a":
+            db.session.add(action)
+            db.session.commit()
+            send_action_mail(leave)
+            update_log(g.user.id,"Declined leave request id "+str(leave.id))
+            return redirect(url_for("requests"))
+        elif action == "a" and not leave.action:
             action = Leave_action(leave_id=leave.id,user_id=g.user.id,status=1)
+            db.session.add(action)
+            db.session.commit()
+            send_action_mail(leave)
+            update_log(g.user.id,"Approved leave request id "+str(leave.id))
+            return redirect(url_for("requests"))
+    elif g.user.id == leave.requested_by.id and action == "c" and not leave.action:
+        action = Leave_action(leave_id=leave.id,user_id=g.user.id,status=3)
         db.session.add(action)
         db.session.commit()
-        send_action_mail(leave)
-    return redirect(url_for("requests"))
+        update_log(g.user.id,"Cancelled leave request id "+str(leave.id))
+        return redirect(url_for("leaves"))
+    return render_template("lost.html")
 
 @app.route('/requests/')
 def requests():
-    if g.user.role == 3 or g.user.leading:
-        dicto = stats(date.today(), 45)
-        high = max(dicto.values())+2
-        if g.user.role == 3:
-            all_leaves = Leave.query.all()
+    if g.user:
+        if g.user.role == 3 or g.user.leading:
+            dicto = get_approved_leaves(date.today(), 40)
+            high = max(dicto.values())+2
+            if g.user.role == 3:
+                all_leaves = Leave.query.all()
+            else:
+                all_leaves = get_myteam_leaves(g.user.id)
+            return render_template("requests.html", leaves=all_leaves,key=json.dumps(list(dicto.keys())), val=json.dumps(list(dicto.values())),high=json.dumps(high))
         else:
-            all_leaves = get_myteam_leaves(g.user.id)
-        return render_template("requests.html", leaves=all_leaves,key=json.dumps(list(dicto.keys())), val=json.dumps(list(dicto.values())),high=json.dumps(high))
+            return redirect(url_for("overview"))
     else:
-        return redirect(url_for("overview"))
+        return render_template("login.html")
 
 @app.route('/company/settings/', methods=["GET","POST"])
 def company_set():
-    if request.method == "POST":
-        #Update company logo
-        image = request.files['image']
-        if image.filename != "" and image and allowed_file(image.filename):
-            filename = secure_filename(image.filename)
-            image.save(os.path.join(app.config['UPLOAD_FOLDER'], "company.jpg"))
-        name = request.form['name']
-        leave_calender = request.form['leave_calender']
-        week_start = request.form['week_start']
-        currency = request.form['currency']
-        day_list = []
-        day_list.append(request.form.get('sunday'))
-        day_list.append(request.form.get("monday"))
-        day_list.append(request.form.get("tuesday"))
-        day_list.append(request.form.get("wednesday"))
-        day_list.append(request.form.get("thursday"))
-        day_list.append(request.form.get("friday"))
-        day_list.append(request.form.get("saturday"))
-        off_days = ""
-        for day in day_list:
-            if day:
-                off_days += day+","
+    if g.user.role == 3:
+        if request.method == "POST":
+            #Update company logo
+            image = request.files['image']
+            if image.filename != "" and image and allowed_file(image.filename):
+                filename = secure_filename(image.filename)
+                image.save(os.path.join(app.config['UPLOAD_FOLDER'], "company.jpg"))
+            name = request.form['name']
+            leave_calender = request.form['leave_calender']
+            week_start = request.form['week_start']
+            currency = request.form['currency']
+            day_list = []
+            day_list.append(request.form.get('sunday'))
+            day_list.append(request.form.get("monday"))
+            day_list.append(request.form.get("tuesday"))
+            day_list.append(request.form.get("wednesday"))
+            day_list.append(request.form.get("thursday"))
+            day_list.append(request.form.get("friday"))
+            day_list.append(request.form.get("saturday"))
+            off_days = ""
+            for day in day_list:
+                if day:
+                    off_days += day+","
 
-        company = Organization.query.get(1)
-        company.name = name
-        company.leave_calender = leave_calender
-        company.week_start = week_start
-        company.week_off = off_days.rstrip(',')
-        company.currency = currency
-        db.session.commit()
-
-    company = Organization.query.first()
-    if company.week_off:
-        weekends = list(map(int, company.week_off.split(",")))
+            company = Organization.query.get(1)
+            company.name = name
+            company.leave_calender = leave_calender
+            company.week_start = week_start
+            company.week_off = off_days.rstrip(',')
+            company.currency = currency
+            db.session.commit()
+            update_log(g.user.id,"Updated company settings")
+            return redirect("/edit-profile/"+str(g.user.id))
+        company = Organization.query.first()
+        if company.week_off:
+            weekends = list(map(int, company.week_off.split(",")))
+        else:
+            weekends =[]
+        return render_template("company_settings.html",company=company,weekends=weekends)
     else:
-        weekends =[]
-    return render_template("company_settings.html",company=company,weekends=weekends)
+        return redirect(url_for(overview))
+
+@app.route('/logs/')
+def get_logs():
+    if g.user:
+        if g.user.role == 3:
+            logs = Activity_log.query.all()
+            return render_template("log.html", logs=logs)
+        else:
+            return redirect(url_for(overview))
+    else:
+        return render_template("login.html")
+
+
+"""
+Starting of functions
+"""
+#Set session browser cookie with 3 layer security
+def set_session_cookie(user):
+    session["uid"] = user.id
+    session["sk"] = bcrypt.generate_password_hash(user.name).decode("utf-8")
+
+def clear_session_cookie():
+    session.pop("uid", None)
+    session.pop("sk", None)
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def create_token(email):
+    user = User.query.filter_by(email=email).first()
+    if user:
+        if user.token:
+            db.session.delete(user.token[0])
+            db.session.commit()
+        token = secrets.token_urlsafe(20)
+        created_date = date.today()
+        access_token = Access_token(key=token,user_id=user.id,created_date=created_date)
+        db.session.add(access_token)
+        db.session.commit()
+        return token
+
+def is_email_unique(email_id):
+    result = True
+    users = User.query.all()
+    for user in users:
+        if user.email == email_id:
+            result = False
+    return result
+
+def update_log(user_id,text):
+    time = datetime.now()
+    activity = Activity_log(time=time, user_id=user_id, description=text)
+    db.session.add(activity)
+    db.session.commit()
 
 def get_myteam_leaves(user_id):
     leaves = []
@@ -664,7 +782,7 @@ def calender_events():
         holiday_list.append(item)
     return holiday_list
 
-def stats(from_d, length):
+def get_approved_leaves(from_d, length):
     dic = {}
     to_d = date.today() + timedelta(days=length)
     leaves = Leave.query.filter(Leave.to_date >= from_d).filter(Leave.from_date <= to_d).filter(Leave.action.any(status=1)).all()
@@ -674,22 +792,24 @@ def stats(from_d, length):
         for leave in leaves:
             if leave.from_date <= from_d and leave.to_date >= from_d:
                 count+=1
-        dic[from_d.strftime("%d %b %Y")] = count
+        dic[from_d.strftime("%d %b")] = count
         from_d += timedelta(days=1)
 
     return dic
-
-
-
-
-    return str(leaves[0].to_date)
-
 
 def send_activation_mail(subject,sender,reciever,link):
     msg = Message(subject,
                   recipients=[reciever.email])
     msg.body = "" 
     msg.html = render_template('emails/activation.html', sender=sender,reciever=reciever,link=link)       
+    mail.send(msg)
+    return True
+
+def send_reset_mail(subject,reciever,link):
+    msg = Message(subject,
+                  recipients=[reciever.email])
+    msg.body = "" 
+    msg.html = render_template('emails/password_reset.html', reciever=reciever,link=link)       
     mail.send(msg)
     return True
 
@@ -735,9 +855,9 @@ def send_holiday_announcement(name, from_date, to_date, reciever):
     mail.send(msg)
     return True
 
-
-
-
+"""
+Starting of error handles
+"""
 @app.errorhandler(404)
 def page_not_found(e):
     # note that we set the 404 status explicitly

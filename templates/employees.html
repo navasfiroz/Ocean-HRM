@@ -6,6 +6,7 @@
 <h2>Employee Profiles</h2>
 {% endblock %}
 {% block content %}
+{% if g.user.role == 3%}
 <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#add-employee">
   Add a new Employee
 </button>
@@ -34,7 +35,7 @@
             <br>
             <div class="form-group">
               <label for="team">Choose the Team</label>
-              <select class="form-control selectpicker" data-style="btn btn-link" name="team" id="team">
+              <select class="form-control selectpicker" data-style="btn btn-link" name="team" id="team" required>
                 <option>Choose a Team</option>
                 {% for team in teams%}
                 <option value="{{team.id}}">{{team.name}}</option>
@@ -49,7 +50,7 @@
             <br>
             <div class="form-group bmd-form-group">
               <label for="role">Permission Role</label>
-              <select class="form-control selectpicker" data-style="btn btn-link" name="role" id="role">
+              <select class="form-control selectpicker" data-style="btn btn-link" name="role" id="role" required>
                 <option value="1">Employee</option>
                 <option value="2">Manager</option>
                 <option value="3">Admin</option>
@@ -70,9 +71,7 @@
               <label for="pay">Net Pay in AED</label>
               <input type="number" class="form-control" name="pay" id="pay" required>
             </div>
-          </div>
-
-          <button type="submit" class="btn btn-primary pull-right">Update Profile</button>
+          <button type="submit" class="btn btn-primary pull-right">Create Profile</button>
           <div class="clearfix"></div>
         </form>
       </div>
@@ -80,6 +79,7 @@
   </div>
 </div>
 </div>
+{% endif %}
 <div class="col-md-12">
   <div class="card">
     <h3>All Members</h3>
@@ -90,7 +90,7 @@
             <tr><th>ID</th>
             <th>Name</th>
             <th>Email</th>
-            <th>DOJ</th>
+            <th>Date of Join</th>
             <th>Team</th>
             <th>Status</th>
             {% if g.user.role == 3 %}
@@ -183,5 +183,8 @@ var name = $(this).data("name")
 $(".name-here").text(name)
 $("#user-id").val(id);
 })
+</script>
+<script type="text/javascript">
+  $(".mn-employees").addClass("active")
 </script>
 {% endblock %}

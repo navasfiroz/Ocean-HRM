@@ -107,6 +107,18 @@ span.small-text {
     font-size: 14px;
 }
 
-/*#colouredRoundedLineChart span.ct-label.ct-horizontal.ct-end {
-    transform: rotate(90deg);
-}*/
+svg.ct-chart-bar, svg.ct-chart-line{
+    overflow: visible;
+}
+.ct-label.ct-label.ct-horizontal.ct-end {
+  position: relative;
+  justify-content: flex-end;
+  text-align: right;
+  transform-origin: 100% 0;
+  transform: translate(-100%) rotate(-45deg);
+  white-space:nowrap;
+}
+.sidebar li.active>a {
+    background-color: #2c3a86 !important;
+    box-shadow: none !important;
+}
